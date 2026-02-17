@@ -14,7 +14,7 @@ export const socialCampaignConfig: BriefConfig = {
       id: 'brief_name',
       title: 'Brand',
       prompt: 'What is the brand name for this social media campaign?',
-      placeholder: 'e.g., Shamal Living, The Opus, Omniyat...',
+      placeholder: 'e.g., Dubai Harbour, Kite Beach, NAIA, Five Guys...',
     },
     {
       id: 'campaign_launch_date',

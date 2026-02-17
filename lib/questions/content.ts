@@ -14,7 +14,7 @@ export const contentConfig: BriefConfig = {
       id: 'brief_name',
       title: 'Brand',
       prompt: 'What is the brand name for this content shoot?',
-      placeholder: 'e.g., Shamal Living, The Opus, Omniyat...',
+      placeholder: 'e.g., Dubai Harbour, Kite Beach, NAIA, Five Guys...',
     },
     {
       id: 'topic',
