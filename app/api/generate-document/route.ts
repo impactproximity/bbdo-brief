@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, Table, TableCell, TableRow, WidthType, BorderStyle } from 'docx';
+import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, Table, TableCell, TableRow, WidthType, BorderStyle, ImageRun, Header, TabStopPosition, TabStopType } from 'docx';
 import { getBriefConfig } from '@/lib/questions';
+import fs from 'fs';
+import path from 'path';
 
 // Helper function to parse People data and create table rows
 function parsePeopleData(peopleText: string): TableRow[] {
@@ -259,9 +261,53 @@ export async function POST(req: Request) {
             contentSections.push(...sectionElements);
         }
 
+        // Load logo images for header
+        const publicDir = path.join(process.cwd(), 'public');
+        const omnicomLogo = fs.readFileSync(path.join(publicDir, 'omnicom-logo.png'));
+        const shamalLogo = fs.readFileSync(path.join(publicDir, 'shamal-logo.png'));
+
         const doc = new Document({
             sections: [{
-                properties: {},
+                properties: {
+                    page: {
+                        margin: {
+                            top: 1440,
+                            right: 1440,
+                            bottom: 1440,
+                            left: 1440,
+                        },
+                    },
+                },
+                headers: {
+                    default: new Header({
+                        children: [
+                            new Paragraph({
+                                children: [
+                                    new ImageRun({
+                                        data: omnicomLogo,
+                                        transformation: { width: 150, height: 23 },
+                                        type: 'png',
+                                    }),
+                                    new TextRun({
+                                        text: "\t",
+                                    }),
+                                    new ImageRun({
+                                        data: shamalLogo,
+                                        transformation: { width: 100, height: 26 },
+                                        type: 'png',
+                                    }),
+                                ],
+                                tabStops: [
+                                    {
+                                        type: TabStopType.RIGHT,
+                                        position: TabStopPosition.MAX,
+                                    },
+                                ],
+                                spacing: { after: 200 },
+                            }),
+                        ],
+                    }),
+                },
                 children: [
                     // Title
                     new Paragraph({
