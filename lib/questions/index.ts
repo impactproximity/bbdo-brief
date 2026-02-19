@@ -5,6 +5,7 @@ import { contentConfig } from './content';
 import { brandConfig } from './brand';
 import { tacticalConfig } from './tactical';
 import { adhocConfig } from './adhoc';
+import { pressReleaseConfig } from './press-release';
 import { BriefConfig, BriefType } from './types';
 
 export type { Question, BriefType, BriefConfig, QuestionResponse } from './types';
@@ -17,6 +18,7 @@ const configs: Record<string, BriefConfig> = {
   brand: brandConfig,
   tactical: tacticalConfig,
   adhoc: adhocConfig,
+  'press-release': pressReleaseConfig,
 };
 
 export const BRIEF_TYPES: BriefType[] = Object.values(configs).map(c => c.type);
