@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { BRIEF_TYPES } from '@/lib/questions';
-import { Target, Megaphone, Share2, PenTool, Gem, Settings, Zap } from 'lucide-react';
+import { Target, Megaphone, Share2, PenTool, Gem, Settings, Zap, Newspaper } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Target: <Target className="h-8 w-8" />,
@@ -15,6 +15,7 @@ const iconMap: Record<string, React.ReactNode> = {
   Gem: <Gem className="h-8 w-8" />,
   Settings: <Settings className="h-8 w-8" />,
   Zap: <Zap className="h-8 w-8" />,
+  Newspaper: <Newspaper className="h-8 w-8" />,
 };
 
 const colorMap: Record<string, { bg: string; border: string; icon: string; hover: string }> = {
@@ -59,6 +60,12 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; hover
     border: 'border-cyan-200 hover:border-cyan-400',
     icon: 'text-cyan-600 bg-cyan-100',
     hover: 'hover:shadow-cyan-200/50',
+  },
+  indigo: {
+    bg: 'bg-indigo-50',
+    border: 'border-indigo-200 hover:border-indigo-400',
+    icon: 'text-indigo-600 bg-indigo-100',
+    hover: 'hover:shadow-indigo-200/50',
   },
 };
 
@@ -115,9 +122,8 @@ export default function LandingPage() {
         </div>
 
         <CardContent className="p-4 md:p-10 bg-white">
-          {/* Row 1: First 4 cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4">
-            {BRIEF_TYPES.slice(0, 4).map((briefType) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {BRIEF_TYPES.map((briefType) => {
               const colors = colorMap[briefType.color] || colorMap.blue;
               return (
                 <Link key={briefType.id} href={`/brief/${briefType.id}`}>
@@ -133,47 +139,6 @@ export default function LandingPage() {
                           {briefType.label}
                         </h3>
                         <p className="text-xs md:text-sm text-slate-500 leading-relaxed">
-                          {briefType.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Row 2: Last 3 cards, centered */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-            {BRIEF_TYPES.slice(4).map((briefType) => {
-              const colors = colorMap[briefType.color] || colorMap.blue;
-              return (
-                <Link key={briefType.id} href={`/brief/${briefType.id}`}>
-                  <div
-                    className={`group relative h-full p-4 md:p-5 rounded-xl md:rounded-2xl border-2 ${colors.border} ${colors.bg} transition-all duration-300 hover:shadow-lg ${colors.hover} hover:-translate-y-0.5 cursor-pointer`}
-                  >
-                    <div className="flex items-start gap-3 md:hidden">
-                      <div className={`flex-shrink-0 p-2 rounded-lg ${colors.icon} transition-transform duration-300 group-hover:scale-105`}>
-                        {iconMap[briefType.icon]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-slate-800 mb-0.5">
-                          {briefType.label}
-                        </h3>
-                        <p className="text-xs text-slate-500 leading-relaxed">
-                          {briefType.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="hidden md:flex flex-col items-center text-center gap-3">
-                      <div className={`p-2.5 rounded-xl ${colors.icon} transition-transform duration-300 group-hover:scale-105`}>
-                        {iconMap[briefType.icon]}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-1">
-                          {briefType.label}
-                        </h3>
-                        <p className="text-sm text-slate-500 leading-relaxed">
                           {briefType.description}
                         </p>
                       </div>
