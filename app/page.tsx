@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { BRIEF_TYPES } from '@/lib/questions';
-import { Target, Megaphone, Share2, PenTool, Gem, Settings, Zap, Newspaper } from 'lucide-react';
+import { Target, Megaphone, Share2, PenTool, Gem, Settings, Zap, Newspaper, Globe } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Target: <Target className="h-8 w-8" />,
@@ -16,6 +16,7 @@ const iconMap: Record<string, React.ReactNode> = {
   Settings: <Settings className="h-8 w-8" />,
   Zap: <Zap className="h-8 w-8" />,
   Newspaper: <Newspaper className="h-8 w-8" />,
+  Globe: <Globe className="h-8 w-8" />,
 };
 
 const colorMap: Record<string, { bg: string; border: string; icon: string; hover: string }> = {
@@ -66,6 +67,12 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; hover
     border: 'border-indigo-200 hover:border-indigo-400',
     icon: 'text-indigo-600 bg-indigo-100',
     hover: 'hover:shadow-indigo-200/50',
+  },
+  teal: {
+    bg: 'bg-teal-50',
+    border: 'border-teal-200 hover:border-teal-400',
+    icon: 'text-teal-600 bg-teal-100',
+    hover: 'hover:shadow-teal-200/50',
   },
 };
 
@@ -123,10 +130,11 @@ export default function LandingPage() {
 
         <CardContent className="p-4 md:p-10 bg-white">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {BRIEF_TYPES.map((briefType) => {
+            {BRIEF_TYPES.map((briefType, index) => {
               const colors = colorMap[briefType.color] || colorMap.blue;
+              const isLastOdd = index === BRIEF_TYPES.length - 1 && BRIEF_TYPES.length % 2 !== 0;
               return (
-                <Link key={briefType.id} href={`/brief/${briefType.id}`}>
+                <Link key={briefType.id} href={`/brief/${briefType.id}`} className={isLastOdd ? 'md:col-span-2' : ''}>
                   <div
                     className={`group relative h-full p-4 md:p-5 rounded-xl md:rounded-2xl border-2 ${colors.border} ${colors.bg} transition-all duration-300 hover:shadow-lg ${colors.hover} hover:-translate-y-0.5 cursor-pointer`}
                   >
