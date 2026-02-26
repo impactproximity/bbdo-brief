@@ -1,36 +1,45 @@
 'use client';
 
-import React, { useState, use } from 'react';
+import React, { useState, use, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, ChevronLeft, ChevronRight, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, CheckCircle2, ArrowLeft, Pencil, X } from 'lucide-react';
 import { getBriefConfig, QuestionResponse } from '@/lib/questions';
 import { Progress } from '@/components/ui/progress';
-import { redirect } from 'next/navigation';
+import { Textarea } from '@/components/ui/textarea';
+import { useRouter } from 'next/navigation';
 
 export default function BriefPage({ params }: { params: Promise<{ type: string }> }) {
   const { type } = use(params);
   const briefConfig = getBriefConfig(type);
-
-  if (!briefConfig) {
-    redirect('/');
-  }
-
-  const QUESTIONS = briefConfig.questions;
+  const router = useRouter();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
   const [paginationPage, setPaginationPage] = useState(0);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
+
+  useEffect(() => {
+    if (!briefConfig) {
+      router.replace('/');
+    }
+  }, []);
+
+  if (!briefConfig) return null;
+
+  const QUESTIONS = briefConfig.questions;
 
   const currentQuestion = QUESTIONS[currentQuestionIndex];
   const currentResponse = responses[currentQuestion.id];
   const progress = (Object.keys(responses).length / QUESTIONS.length) * 100;
   const allQuestionsAnswered = Object.keys(responses).length === QUESTIONS.length;
+  const canGenerateDocument = !!responses[QUESTIONS[0]?.id];
 
   // Pagination logic - show 5 buttons at a time
   const BUTTONS_PER_PAGE = 5;
@@ -80,14 +89,7 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
         }
       }));
 
-      // 4. Auto-advance to next question if not the last one
-      if (currentQuestionIndex < QUESTIONS.length - 1) {
-        setTimeout(() => {
-          navigateToQuestion(currentQuestionIndex + 1);
-        }, 1500);
-      }
-
-    } catch (error) {
+} catch (error) {
       console.error('Error:', error);
       alert('Something went wrong. Please try again.');
     } finally {
@@ -114,7 +116,10 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
         }),
       });
 
-      if (!response.ok) throw new Error('Document generation failed');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Document generation failed');
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -125,8 +130,8 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
       URL.revokeObjectURL(url);
 
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to generate document. Please try again.');
+      console.error('Document generation error:', error);
+      alert(`Failed to generate document: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGeneratingDoc(false);
     }
@@ -318,8 +323,51 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
                 </div>
 
                 <div className="pt-2 md:pt-3 border-t-2 border-slate-200">
-                  <div className="text-[10px] md:text-xs font-extrabold text-slate-900 uppercase tracking-wider mb-1.5 md:mb-2">Enhanced Version</div>
-                  <p className="text-slate-900 leading-relaxed text-xs md:text-base font-medium">{currentResponse.enhancedResponse}</p>
+                  <div className="flex items-center justify-between mb-1.5 md:mb-2">
+                    <div className="text-[10px] md:text-xs font-extrabold text-slate-900 uppercase tracking-wider">Enhanced Version</div>
+                    {editingQuestionId !== currentQuestion.id && (
+                      <button
+                        onClick={() => { setEditingQuestionId(currentQuestion.id); setEditingValue(currentResponse.enhancedResponse); }}
+                        className="flex items-center gap-1 text-[10px] md:text-xs text-slate-500 hover:text-slate-800 font-semibold"
+                      >
+                        <Pencil className="h-3 w-3" /> Edit
+                      </button>
+                    )}
+                  </div>
+
+                  {editingQuestionId === currentQuestion.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        className="text-xs md:text-base text-slate-900 font-medium min-h-[80px] border-2 border-orange-400 focus:border-orange-500"
+                        autoFocus
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => setEditingQuestionId(null)}
+                          className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 font-semibold px-2 py-1"
+                        >
+                          <X className="h-3 w-3" /> Cancel
+                        </button>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setResponses(prev => ({
+                              ...prev,
+                              [currentQuestion.id]: { ...prev[currentQuestion.id], enhancedResponse: editingValue },
+                            }));
+                            setEditingQuestionId(null);
+                          }}
+                          className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 h-auto"
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-900 leading-relaxed text-xs md:text-base font-medium">{currentResponse.enhancedResponse}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1.5 md:gap-2 pt-1.5 md:pt-2 text-xs md:text-sm text-green-600 font-bold">
@@ -364,7 +412,7 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
               <Button
                 size="lg"
                 onClick={handleGenerateDocument}
-                disabled={!allQuestionsAnswered || isGeneratingDoc}
+                disabled={!canGenerateDocument || isGeneratingDoc}
                 className="bg-gradient-to-br from-green-600 via-green-500 to-green-600 hover:from-green-700 hover:via-green-600 hover:to-green-700 font-bold shadow-xl shadow-green-400/50 disabled:opacity-40 rounded-xl md:rounded-2xl px-3 md:px-6 py-4 md:py-6 border-2 md:border-3 border-green-700 text-white text-xs md:text-base"
               >
                 <Download className="h-4 w-4 md:h-5 md:w-5 mr-1 md:mr-2" />
@@ -373,15 +421,29 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
             )}
           </div>
 
-          {/* Completion Message */}
-          {allQuestionsAnswered && (
-            <div className="mt-3 md:mt-4 p-3 md:p-4 bg-gradient-to-br from-green-100 via-emerald-100 to-green-100 border-2 border-green-500 rounded-xl md:rounded-2xl text-center shadow-md animate-in fade-in">
-              <CheckCircle2 className="h-6 w-6 md:h-8 md:w-8 text-green-600 mx-auto mb-1.5 md:mb-2 drop-shadow-md" />
-              <p className="text-green-900 font-bold text-sm md:text-base mb-0.5 md:mb-1">
-                All Questions Completed!
+          {/* Skip to Download hint — shown on intermediate pages once first question is answered */}
+          {canGenerateDocument && currentQuestionIndex < QUESTIONS.length - 1 && (
+            <div className="mt-3 md:mt-4 text-center">
+              <button
+                onClick={() => navigateToQuestion(QUESTIONS.length - 1)}
+                className="text-xs md:text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2"
+              >
+                Ready to download? Skip to the end
+              </button>
+            </div>
+          )}
+
+          {/* Completion Message — shown only on the last question */}
+          {canGenerateDocument && currentQuestionIndex === QUESTIONS.length - 1 && (
+            <div className={`mt-3 md:mt-4 p-3 md:p-4 border-2 rounded-xl md:rounded-2xl text-center shadow-md animate-in fade-in ${allQuestionsAnswered ? 'bg-gradient-to-br from-green-100 via-emerald-100 to-green-100 border-green-500' : 'bg-gradient-to-br from-blue-50 via-blue-50 to-blue-50 border-blue-400'}`}>
+              <CheckCircle2 className={`h-6 w-6 md:h-8 md:w-8 mx-auto mb-1.5 md:mb-2 drop-shadow-md ${allQuestionsAnswered ? 'text-green-600' : 'text-blue-500'}`} />
+              <p className={`font-bold text-sm md:text-base mb-0.5 md:mb-1 ${allQuestionsAnswered ? 'text-green-900' : 'text-blue-900'}`}>
+                {allQuestionsAnswered ? 'All Questions Completed!' : 'Ready to Download'}
               </p>
-              <p className="text-green-700 text-xs md:text-sm font-medium">
-                You can now generate your professional brief document.
+              <p className={`text-xs md:text-sm font-medium ${allQuestionsAnswered ? 'text-green-700' : 'text-blue-700'}`}>
+                {allQuestionsAnswered
+                  ? 'Your brief is complete. Generate your document below.'
+                  : 'Unanswered sections will show as "Not provided". You can always update and re-download.'}
               </p>
             </div>
           )}

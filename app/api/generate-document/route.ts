@@ -343,7 +343,9 @@ export async function POST(req: Request) {
 
         const buffer = await Packer.toBuffer(doc);
 
-        const filename = `${documentTitle.replace(/\s+/g, '_')}_${briefName.replace(/\s+/g, '_')}_${Date.now()}.docx`;
+        const safeDocTitle = documentTitle.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_');
+        const safeBriefName = briefName.replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, '_') || 'Brief';
+        const filename = `${safeDocTitle}_${safeBriefName}_${Date.now()}.docx`;
 
         return new NextResponse(buffer as unknown as BodyInit, {
             headers: {
@@ -353,7 +355,8 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         console.error('Document generation error:', error);
-        return NextResponse.json({ error: 'Document generation failed' }, { status: 500 });
+        return NextResponse.json({ error: 'Document generation failed', detail: message }, { status: 500 });
     }
 }
