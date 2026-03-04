@@ -69,6 +69,7 @@ export const contentConfig: BriefConfig = {
       title: 'Shot List / Must-Capture Moments',
       prompt: 'Is there a shot list or must-capture moments?',
       placeholder: 'e.g., Hero shots, detail shots, lifestyle moments, specific angles, key scenes...',
+      allowUpload: true,
     },
     {
       id: 'talent_props_permissions',
@@ -93,6 +94,13 @@ export const contentConfig: BriefConfig = {
       title: 'Must Dos and Don\'ts',
       prompt: 'What are the must dos and don\'ts for this shoot?',
       placeholder: 'e.g., Required angles, styling guidelines, settings, brand restrictions, things to avoid...',
+    },
+    {
+      id: 'deliverables',
+      title: 'Deliverables',
+      prompt: 'What are the final deliverables expected from this shoot?',
+      placeholder: 'e.g., 20 edited stills, 3 short-form videos, raw footage, 1 hero film, specific file formats and resolutions...',
+      allowUpload: true,
     },
     {
       id: 'additional_notes',

@@ -90,14 +90,9 @@ export default function LandingPage() {
             priority
             className="drop-shadow-md w-[100px] md:w-[160px] h-auto"
           />
-          <Image
-            src="/omnicom-logo.webp"
-            alt="Omnicom Logo"
-            width={200}
-            height={44}
-            priority
-            className="drop-shadow-md w-[130px] md:w-[200px] h-auto"
-          />
+          <span className="drop-shadow-md text-[22px] md:text-[34px] leading-none tracking-tight" style={{ fontFamily: 'sans-serif' }}>
+            <span className="font-bold text-black">Omnicom</span><span className="font-normal text-black">Group</span>
+          </span>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <div className="h-8 md:h-10 w-px bg-slate-400"></div>

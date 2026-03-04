@@ -3,7 +3,7 @@ import { BriefConfig } from './types';
 export const strategyConfig: BriefConfig = {
   type: {
     id: 'strategy',
-    label: 'Strategy',
+    label: 'Strategic Campaign Brief',
     description: 'Create a comprehensive strategy campaign brief with objectives, audience targeting, and key messaging.',
     icon: 'Target',
     color: 'blue',
@@ -63,6 +63,7 @@ export const strategyConfig: BriefConfig = {
       title: 'The Assignment & Deliverables',
       prompt: 'What are the assignment and deliverables?',
       placeholder: 'e.g., Specific deliverables, channels, formats required...',
+      allowUpload: true,
     },
     {
       id: 'channel_considerations',

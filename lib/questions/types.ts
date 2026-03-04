@@ -3,6 +3,7 @@ export interface Question {
   title: string;
   prompt: string;
   placeholder: string;
+  allowUpload?: boolean;
 }
 
 export interface BriefType {

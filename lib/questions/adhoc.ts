@@ -57,6 +57,7 @@ export const adhocConfig: BriefConfig = {
       title: 'Assets',
       prompt: 'Are there any assets to use or do we need to shoot?',
       placeholder: 'e.g., New asset links, existing assets, new shoot required, stock imagery...',
+      allowUpload: true,
     },
     {
       id: 'organic_or_paid',
@@ -69,6 +70,13 @@ export const adhocConfig: BriefConfig = {
       title: 'Must-Dos & Must-Don\'ts',
       prompt: 'Any must-dos or must-don\'ts for copy and visuals?',
       placeholder: 'e.g., Tone of voice, mandatory brand elements, things to avoid, hashtags, legal disclaimers...',
+    },
+    {
+      id: 'deliverables',
+      title: 'Deliverables',
+      prompt: 'What are the exact deliverables needed for this post?',
+      placeholder: 'e.g., 1 static post + caption, 3 story frames, 1 reel with VO, all in required platform specs...',
+      allowUpload: true,
     },
     {
       id: 'additional_references',

@@ -69,6 +69,14 @@ export const socialCampaignConfig: BriefConfig = {
       title: 'Available Assets',
       prompt: 'Are there any available assets to use or are we shooting?',
       placeholder: 'e.g., Existing photography, new shoot required, CGI renders, video footage, UGC...',
+      allowUpload: true,
+    },
+    {
+      id: 'deliverables',
+      title: 'Deliverables',
+      prompt: 'What are the specific deliverables required for this campaign?',
+      placeholder: 'e.g., 3 feed posts, 5 stories, 1 reel, 2 paid banners, copy for each format...',
+      allowUpload: true,
     },
     {
       id: 'additional_notes',

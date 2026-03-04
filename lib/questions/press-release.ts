@@ -93,6 +93,7 @@ export const pressReleaseConfig: BriefConfig = {
       title: 'Numbers & Sources',
       prompt: 'If you would like us to include numbers, please share a report, research report, or preferred sources to refer to.',
       placeholder: 'e.g., Research reports, statistics, data points, annual reports, third-party studies...',
+      allowUpload: true,
     },
     {
       id: 'journalist_source',
@@ -111,12 +112,20 @@ export const pressReleaseConfig: BriefConfig = {
       title: 'Visual Assets',
       prompt: 'What visual assets should accompany the release?',
       placeholder: 'e.g., High-res images, renders, headshots, logos, video, infographics...',
+      allowUpload: true,
     },
     {
       id: 'measurement',
       title: 'Measurement',
       prompt: 'How will the success of this press release be measured?',
       placeholder: 'e.g., Media pickups, reach, sentiment, coverage targets, share of voice...',
+    },
+    {
+      id: 'deliverables',
+      title: 'Deliverables',
+      prompt: 'What are the deliverables expected from this press release brief?',
+      placeholder: 'e.g., Press release copy in English and Arabic, media kit, quote approval, distribution list...',
+      allowUpload: true,
     },
     {
       id: 'additional_notes',

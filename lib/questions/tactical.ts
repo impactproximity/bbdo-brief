@@ -27,6 +27,7 @@ export const tacticalConfig: BriefConfig = {
       title: 'Deliverable(s) & Specs',
       prompt: 'What are the specific deliverables, detailed specs, and file formats required?',
       placeholder: 'e.g., 3 stories (min 3 frames/max 5), image specs (1080x1920, .jpg/.png), video specs (1080x1920, .mp4/.mov, max 60s), asset tracker link...',
+      allowUpload: true,
     },
     {
       id: 'single_minded_message',
