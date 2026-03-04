@@ -45,6 +45,7 @@ export const brandConfig: BriefConfig = {
       title: 'Market Research',
       prompt: 'Share internal market research insights covering consumers, competitive landscape, and company considerations.',
       placeholder: 'e.g., Consumer needs/behaviors/jobs to be done, feature/benefit/value claims, competitive vertical & horizontal positioning, perceptual map, brand feasibility & authenticity...',
+      allowUpload: true,
     },
     {
       id: 'target_audience',
@@ -75,6 +76,7 @@ export const brandConfig: BriefConfig = {
       title: 'The Assignment & Deliverables',
       prompt: 'What are the required deliverables?',
       placeholder: 'e.g., Brand DNA, Brand Positioning, Target Audience, USPs, Brand Promise, Brand Values, Brand Purpose, Brand Vision, Brand Codes, Brand Name, Identity, Operationalization, Messaging/Comms Matrix, Measurement...',
+      allowUpload: true,
     },
     {
       id: 'budget',

@@ -4,6 +4,7 @@ import React, { useState, use, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { VoiceRecorder } from '@/components/VoiceRecorder';
+import { DocumentUploader } from '@/components/DocumentUploader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, ChevronLeft, ChevronRight, CheckCircle2, ArrowLeft, Pencil, X } from 'lucide-react';
@@ -20,6 +21,7 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const [inputMode, setInputMode] = useState<'voice' | 'upload'>('voice');
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
   const [paginationPage, setPaginationPage] = useState(0);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -141,6 +143,18 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
     setCurrentQuestionIndex(index);
     const newPage = Math.floor(index / BUTTONS_PER_PAGE);
     setPaginationPage(newPage);
+    setInputMode('voice');
+  };
+
+  const handleDocumentUpload = (userInput: string, enhancedResponse: string) => {
+    setResponses(prev => ({
+      ...prev,
+      [currentQuestion.id]: {
+        questionId: currentQuestion.id,
+        userInput,
+        enhancedResponse,
+      }
+    }));
   };
 
   const handlePaginationPrev = () => {
@@ -168,14 +182,9 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
             priority
             className="drop-shadow-md w-[100px] md:w-[160px] h-auto"
           />
-          <Image
-            src="/omnicom-logo.webp"
-            alt="Omnicom Logo"
-            width={200}
-            height={44}
-            priority
-            className="drop-shadow-md w-[130px] md:w-[200px] h-auto"
-          />
+          <span className="drop-shadow-md text-[22px] md:text-[34px] leading-none tracking-tight" style={{ fontFamily: 'sans-serif' }}>
+            <span className="font-bold text-black">Omnicom</span><span className="font-normal text-black">Group</span>
+          </span>
         </div>
         <div className="flex items-center gap-2 md:gap-3">
           <div className="h-8 md:h-10 w-px bg-slate-400"></div>
@@ -378,12 +387,48 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
             )}
           </div>
 
-          {/* Voice Recorder */}
-          <div className="flex justify-center py-2 md:py-4">
-            <VoiceRecorder
-              onRecordingComplete={handleAudioRecording}
-              isProcessing={isProcessing}
-            />
+          {/* Input Area: Voice or Upload */}
+          <div className="flex flex-col items-center py-2 md:py-4 gap-3">
+            {currentQuestion.allowUpload && (
+              <div className="flex rounded-xl border-2 border-slate-300 overflow-hidden shadow-sm">
+                <button
+                  onClick={() => setInputMode('voice')}
+                  disabled={isProcessing}
+                  className={`px-4 py-2 text-xs md:text-sm font-bold transition-colors ${
+                    inputMode === 'voice'
+                      ? 'bg-slate-700 text-white'
+                      : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Voice
+                </button>
+                <button
+                  onClick={() => setInputMode('upload')}
+                  disabled={isProcessing}
+                  className={`px-4 py-2 text-xs md:text-sm font-bold transition-colors ${
+                    inputMode === 'upload'
+                      ? 'bg-slate-700 text-white'
+                      : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Upload Document
+                </button>
+              </div>
+            )}
+
+            {inputMode === 'voice' ? (
+              <VoiceRecorder
+                onRecordingComplete={handleAudioRecording}
+                isProcessing={isProcessing}
+              />
+            ) : (
+              <DocumentUploader
+                onUploadComplete={handleDocumentUpload}
+                isProcessing={isProcessing}
+                setIsProcessing={setIsProcessing}
+                questionTitle={currentQuestion.title}
+              />
+            )}
           </div>
 
           {/* Navigation Buttons */}

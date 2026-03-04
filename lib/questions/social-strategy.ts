@@ -47,6 +47,13 @@ export const socialStrategyConfig: BriefConfig = {
       placeholder: 'e.g., Platforms to prioritize, content to avoid, brand tone requirements, competitive considerations...',
     },
     {
+      id: 'deliverables',
+      title: 'Deliverables',
+      prompt: 'What should the strategy deliverable include?',
+      placeholder: 'e.g., Full strategy document, content calendar, platform recommendations, posting frequency, tone of voice guidelines...',
+      allowUpload: true,
+    },
+    {
       id: 'additional_notes',
       title: 'Additional Notes',
       prompt: 'Is there anything else you want us to be aware of?',

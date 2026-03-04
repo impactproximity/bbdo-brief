@@ -75,6 +75,7 @@ export const websiteConfig: BriefConfig = {
       title: 'Visual Assets',
       prompt: 'Are there any images, banners, or graphics to use? Please share links or describe what is needed.',
       placeholder: 'e.g., SharePoint link to assets, new photography to be shot, existing brand imagery, specific dimensions required...',
+      allowUpload: true,
     },
     {
       id: 'booking_mechanics',
@@ -87,6 +88,13 @@ export const websiteConfig: BriefConfig = {
       title: 'Tracking Requirements',
       prompt: 'Is tracking required? If so, please provide UTM parameters or campaign details for GA.',
       placeholder: 'e.g., UTM source=email&medium=newsletter&campaign=summer26, no tracking needed, GA event tagging required...',
+    },
+    {
+      id: 'deliverables',
+      title: 'Deliverables',
+      prompt: 'What are the specific deliverables expected from this website request?',
+      placeholder: 'e.g., Updated homepage banner, new landing page, revised copy on 3 pages, functional booking widget...',
+      allowUpload: true,
     },
     {
       id: 'additional_notes',
