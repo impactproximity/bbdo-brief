@@ -22,8 +22,15 @@ export function DocumentUploader({
   const [statusText, setStatusText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
+    if (file && file.size > MAX_FILE_SIZE) {
+      alert('File size exceeds 1 MB. Please upload a smaller file.');
+      e.target.value = '';
+      return;
+    }
     setSelectedFile(file);
     setStatusText('');
   };
@@ -106,7 +113,7 @@ export function DocumentUploader({
           <>
             <Upload className="h-10 w-10 text-slate-400" />
             <p className="text-sm font-semibold text-slate-600">Click to select a file</p>
-            <p className="text-xs text-slate-400">PDF or DOCX only</p>
+            <p className="text-xs text-slate-400">PDF or DOCX only · Max 1 MB</p>
           </>
         )}
       </div>

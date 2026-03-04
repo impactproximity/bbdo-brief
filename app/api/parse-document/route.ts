@@ -12,6 +12,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
         }
 
+        const MAX_SIZE = 1 * 1024 * 1024; // 1 MB
+        if (file.size > MAX_SIZE) {
+            return NextResponse.json({ error: 'File size exceeds 1 MB limit.' }, { status: 400 });
+        }
+
         const mimeType = file.type;
         const isPdf = mimeType === 'application/pdf';
         const isDocx = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
