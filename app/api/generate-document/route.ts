@@ -263,7 +263,6 @@ export async function POST(req: Request) {
 
         // Load logo images for header
         const publicDir = path.join(process.cwd(), 'public');
-        const omnicomLogo = fs.readFileSync(path.join(publicDir, 'omnicom-logo.png'));
         const shamalLogo = fs.readFileSync(path.join(publicDir, 'shamal-logo.png'));
 
         const doc = new Document({
@@ -283,10 +282,17 @@ export async function POST(req: Request) {
                         children: [
                             new Paragraph({
                                 children: [
-                                    new ImageRun({
-                                        data: omnicomLogo,
-                                        transformation: { width: 150, height: 23 },
-                                        type: 'png',
+                                    new TextRun({
+                                        text: "Omnicom",
+                                        bold: true,
+                                        size: 22,
+                                        font: "Arial",
+                                    }),
+                                    new TextRun({
+                                        text: "Group",
+                                        bold: false,
+                                        size: 22,
+                                        font: "Arial",
                                     }),
                                     new TextRun({
                                         text: "\t",
