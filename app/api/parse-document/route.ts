@@ -1,7 +1,4 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: Request) {
     try {
@@ -12,9 +9,9 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
         }
 
-        const MAX_SIZE = 1 * 1024 * 1024; // 1 MB
+        const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
         if (file.size > MAX_SIZE) {
-            return NextResponse.json({ error: 'File size exceeds 1 MB limit.' }, { status: 400 });
+            return NextResponse.json({ error: 'File size exceeds 5 MB limit.' }, { status: 400 });
         }
 
         const mimeType = file.type;
@@ -26,27 +23,17 @@ export async function POST(req: Request) {
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        const ext = isPdf ? '.pdf' : '.docx';
-        const tempFilePath = path.join('/tmp', `${uuidv4()}${ext}`);
-        fs.writeFileSync(tempFilePath, buffer);
-
         let text = '';
 
-        try {
-            if (isPdf) {
-                // eslint-disable-next-line @typescript-eslint/no-require-imports
-                const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
-                const result = await pdfParse(buffer);
-                text = result.text;
-            } else {
-                const mammoth = await import('mammoth');
-                const result = await mammoth.extractRawText({ path: tempFilePath });
-                text = result.value;
-            }
-        } finally {
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-            }
+        if (isPdf) {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
+            const result = await pdfParse(buffer);
+            text = result.text;
+        } else {
+            const mammoth = await import('mammoth');
+            const result = await mammoth.extractRawText({ buffer });
+            text = result.value;
         }
 
         return NextResponse.json({ text });
