@@ -207,7 +207,7 @@ export default function BriefPage({ params }: { params: Promise<{ type: string }
       <Card className="w-full max-w-6xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border-2 md:border-3 border-slate-300 overflow-hidden rounded-2xl md:rounded-3xl">
         <CardHeader className="text-center border-b-2 md:border-b-3 border-slate-300 bg-white pb-4 md:pb-6 pt-5 md:pt-8 px-4">
           <div className="flex items-center justify-center gap-3 mb-2 md:mb-3">
-            <Link href="/">
+            <Link href="/shamal">
               <Button variant="ghost" size="sm" className="rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm">
                 <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
                 Back
