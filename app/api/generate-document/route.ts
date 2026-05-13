@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, Table, TableCell, TableRow, WidthType, BorderStyle, ImageRun, Header, TabStopPosition, TabStopType } from 'docx';
 import { getBriefConfig } from '@/lib/questions';
+import { getAgencyBriefConfig } from '@/lib/questions/agency';
 import fs from 'fs';
 import path from 'path';
+
+type BriefSource = 'shamal' | 'agency';
 
 // Helper function to parse People data and create table rows
 function parsePeopleData(peopleText: string): TableRow[] {
@@ -229,9 +232,18 @@ function buildSectionForQuestion(
 
 export async function POST(req: Request) {
     try {
-        const { briefType, responses } = await req.json();
+        const { briefType, responses, briefSource } = (await req.json()) as {
+            briefType?: string;
+            responses: Record<string, string>;
+            briefSource?: BriefSource;
+        };
 
-        const config = getBriefConfig(briefType || 'strategy');
+        const source: BriefSource = briefSource === 'agency' ? 'agency' : 'shamal';
+
+        const config = source === 'agency'
+            ? getAgencyBriefConfig(briefType || 'big-idea')
+            : getBriefConfig(briefType || 'strategy');
+
         const documentTitle = config?.documentTitle || 'Campaign Brief';
         const questions = config?.questions || [];
 
@@ -261,9 +273,29 @@ export async function POST(req: Request) {
             contentSections.push(...sectionElements);
         }
 
-        // Load logo images for header
-        const publicDir = path.join(process.cwd(), 'public');
-        const shamalLogo = fs.readFileSync(path.join(publicDir, 'shamal-logo.png'));
+        // Build header — Shamal flow includes the Shamal logo on the right; agency flow is Omnicom-only.
+        const headerChildren: (TextRun | ImageRun)[] = [
+            new TextRun({ text: 'Omnicom', bold: true, size: 22, font: 'Arial' }),
+            new TextRun({ text: 'Group', bold: false, size: 22, font: 'Arial' }),
+        ];
+
+        if (source === 'shamal') {
+            const publicDir = path.join(process.cwd(), 'public');
+            const shamalLogo = fs.readFileSync(path.join(publicDir, 'shamal-logo.png'));
+            headerChildren.push(
+                new TextRun({ text: '\t' }),
+                new ImageRun({
+                    data: shamalLogo,
+                    transformation: { width: 100, height: 26 },
+                    type: 'png',
+                }),
+            );
+        } else {
+            headerChildren.push(
+                new TextRun({ text: '\t' }),
+                new TextRun({ text: 'IMPACT BBDO', bold: true, size: 22, font: 'Arial' }),
+            );
+        }
 
         const doc = new Document({
             sections: [{
@@ -281,28 +313,7 @@ export async function POST(req: Request) {
                     default: new Header({
                         children: [
                             new Paragraph({
-                                children: [
-                                    new TextRun({
-                                        text: "Omnicom",
-                                        bold: true,
-                                        size: 22,
-                                        font: "Arial",
-                                    }),
-                                    new TextRun({
-                                        text: "Group",
-                                        bold: false,
-                                        size: 22,
-                                        font: "Arial",
-                                    }),
-                                    new TextRun({
-                                        text: "\t",
-                                    }),
-                                    new ImageRun({
-                                        data: shamalLogo,
-                                        transformation: { width: 100, height: 26 },
-                                        type: 'png',
-                                    }),
-                                ],
+                                children: headerChildren,
                                 tabStops: [
                                     {
                                         type: TabStopType.RIGHT,

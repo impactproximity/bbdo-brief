@@ -124,6 +124,11 @@ export default function LandingPage() {
         </div>
 
         <CardContent className="p-4 md:p-10 bg-white">
+          <div className="mb-4 md:mb-6 flex justify-end">
+            <Link href="/agency" className="text-xs md:text-sm font-semibold text-slate-600 hover:text-orange-600 underline underline-offset-4 transition-colors">
+              IMPACT BBDO Agency Briefs →
+            </Link>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {BRIEF_TYPES.map((briefType, index) => {
               const colors = colorMap[briefType.color] || colorMap.blue;
