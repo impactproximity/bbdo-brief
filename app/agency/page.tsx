@@ -40,12 +40,14 @@ export default function AgencyDashboard() {
 
       <Card className="w-full max-w-5xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border-2 md:border-3 border-slate-300 overflow-hidden rounded-2xl md:rounded-3xl">
         <div className="text-center border-b-2 md:border-b-3 border-slate-300 bg-white pb-4 md:pb-6 pt-6 md:pt-8 px-4 relative">
+          {/* Shamal cross-link — hidden for now, uncomment to restore.
           <Link href="/shamal" className="absolute left-3 md:left-5 top-3 md:top-5">
             <Button variant="ghost" size="sm" className="rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm">
               <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
               Shamal Briefs
             </Button>
           </Link>
+          */}
           <h1 className="text-2xl md:text-4xl font-bold text-slate-800 mb-2 md:mb-3">Agency Brief Creator</h1>
           <p className="text-sm md:text-lg text-slate-600 max-w-2xl mx-auto font-medium">
             Upload your materials. We&apos;ll pre-fill the brief. You review, refine and ship.
