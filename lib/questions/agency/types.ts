@@ -7,6 +7,7 @@ export interface AgencyQuestion extends Question {
 
 export interface AgencyBriefConfig extends Omit<BriefConfig, 'questions'> {
   questions: AgencyQuestion[];
+  systemPrompt?: string;
 }
 
 export type { BriefType };
