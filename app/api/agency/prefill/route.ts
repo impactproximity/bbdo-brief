@@ -52,19 +52,25 @@ export async function POST(req: Request) {
       };
     }
 
-    const systemBlocks: Anthropic.TextBlockParam[] = [
-      {
-        type: 'text',
-        text: `You are an expert agency brief writer at IMPACT BBDO. You are pre-filling a "${config.documentTitle}" from supporting materials.
+    const baseStrategicPrompt = config.systemPrompt
+      ?? `You are an expert agency brief writer at IMPACT BBDO. You are pre-filling a "${config.documentTitle}" from supporting materials.`;
 
-Rules:
+    const operationalRules = `OPERATIONAL RULES FOR THIS PRE-FILL TASK
+You will pre-fill answers for the "${config.documentTitle}" using the submit_brief_answers tool exactly once.
+
 1. Extract verbatim from the corpus where possible. Do not fabricate facts, names, dates, budgets or commitments.
-2. For each question, produce a concise, brief-ready draft (2-5 sentences). Tone: confident, sharp, agency-grade.
-3. If the corpus has no signal for a question, set "missing": true and "value": "" (empty string).
+2. Where the corpus is thin, you may interpret and elevate per the strategic principles above — but mark such answers with confidence "medium" or "low".
+3. If the corpus has no signal at all for a question, set "missing": true and "value": "" (empty string).
 4. Use confidence "high" only when the corpus is explicit. Use "medium" when inferred. Use "low" for thin signal.
-5. In "suggestion", flag good-to-have additions or missing inputs (e.g. "Add success metrics", "No budget specified").
-6. Questions to fill:\n${questionSchema}`,
-      },
+5. In "suggestion", flag good-to-have additions or missing inputs (e.g. "Add success metrics", "No budget specified", "Push the reframe further").
+6. Keep each "value" concise and brief-ready (2-6 sentences). Sharp, not bloated.
+
+QUESTIONS TO FILL:
+${questionSchema}`;
+
+    const systemBlocks: Anthropic.TextBlockParam[] = [
+      { type: 'text', text: baseStrategicPrompt, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: operationalRules },
     ];
 
     const corpusBlock = `<corpus>\n${corpus || '(no documents uploaded)'}\n</corpus>\n\n<voice_transcript>\n${voiceTranscript || '(none)'}\n</voice_transcript>\n\n<text_notes>\n${textNotes || '(none)'}\n</text_notes>`;

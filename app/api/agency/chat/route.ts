@@ -46,10 +46,11 @@ export async function POST(req: Request) {
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const systemBlocks: Anthropic.TextBlockParam[] = [
-      {
-        type: 'text',
-        text: `You are helping an IMPACT BBDO strategist refine a single answer in a "${config.documentTitle}".
+    const baseStrategicPrompt = config.systemPrompt
+      ?? `You are helping an IMPACT BBDO strategist refine a single answer in a "${config.documentTitle}". Be confident, sharp, culturally fluent.`;
+
+    const chatRules = `REFINE TASK CONTEXT
+You are refining a single answer inside the "${config.documentTitle}".
 
 Question being refined:
 - ID: ${question.id}
@@ -57,13 +58,15 @@ Question being refined:
 - Prompt: ${question.prompt}
 ${question.hint ? `- Extraction hint: ${question.hint}` : ''}
 
-Rules:
+Interaction rules:
 1. Stay grounded in the corpus. Do not fabricate facts, names, budgets or commitments.
 2. Be concise and concrete. Replies are 1-4 short paragraphs unless the user asks for more.
-3. When the user asks for a rewrite, an alternative or "make it sharper", call the propose_update tool with the suggested replacement text.
-4. When the user is just asking a question or chatting, reply normally without calling the tool.
-5. Match agency tone: confident, sharp, culturally fluent.`,
-      },
+3. When the user asks for a rewrite, an alternative, or to sharpen/expand the answer, call the propose_update tool with the suggested replacement text. The replacement must follow the strategic principles above.
+4. When the user is just asking a question or thinking out loud, reply normally without calling the tool.`;
+
+    const systemBlocks: Anthropic.TextBlockParam[] = [
+      { type: 'text', text: baseStrategicPrompt, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: chatRules },
     ];
 
     const corpusContext: Anthropic.TextBlockParam = {
