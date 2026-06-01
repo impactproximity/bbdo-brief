@@ -10,12 +10,13 @@ import { QuestionChatPanel } from './QuestionChatPanel';
 
 interface AgencyReviewProps {
   briefType: string;
+  clientId?: string;
   config: AgencyBriefConfig;
   corpus: string;
   initialAnswers: PrefillResult;
 }
 
-export function AgencyReview({ briefType, config, corpus, initialAnswers }: AgencyReviewProps) {
+export function AgencyReview({ briefType, clientId, config, corpus, initialAnswers }: AgencyReviewProps) {
   const QUESTIONS = config.questions;
   const [answers, setAnswers] = useState<PrefillResult>(initialAnswers);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -79,7 +80,7 @@ export function AgencyReview({ briefType, config, corpus, initialAnswers }: Agen
       const res = await fetch('/api/generate-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ briefType, responses, briefSource: 'agency' }),
+        body: JSON.stringify({ briefType, clientId, responses, briefSource: 'agency' }),
       });
 
       if (!res.ok) {
@@ -191,6 +192,7 @@ export function AgencyReview({ briefType, config, corpus, initialAnswers }: Agen
         {chatOpenId === currentQuestion.id && (
           <QuestionChatPanel
             briefType={briefType}
+            clientId={clientId}
             questionId={currentQuestion.id}
             questionTitle={currentQuestion.title}
             currentAnswer={currentAnswer?.value || ''}

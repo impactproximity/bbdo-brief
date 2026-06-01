@@ -13,6 +13,7 @@ interface ChatMessage {
 
 interface QuestionChatPanelProps {
   briefType: string;
+  clientId?: string;
   questionId: string;
   questionTitle: string;
   currentAnswer: string;
@@ -23,6 +24,7 @@ interface QuestionChatPanelProps {
 
 export function QuestionChatPanel({
   briefType,
+  clientId,
   questionId,
   questionTitle,
   currentAnswer,
@@ -54,6 +56,7 @@ export function QuestionChatPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           briefType,
+          clientId,
           questionId,
           currentAnswer,
           corpus,
