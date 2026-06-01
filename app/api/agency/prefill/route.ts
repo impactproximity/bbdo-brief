@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAgencyBriefConfig, type PrefillResult } from '@/lib/questions/agency';
+import { getClientConfig, buildClientContextBlock } from '@/lib/clients';
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_OUTPUT_TOKENS = 8192;
 
 export async function POST(req: Request) {
   try {
-    const { briefType, corpus, voiceTranscript, textNotes } = await req.json();
+    const { briefType, clientId, corpus, voiceTranscript, textNotes } = await req.json();
 
     const config = getAgencyBriefConfig(briefType);
     if (!config) {
@@ -68,8 +69,13 @@ You will pre-fill answers for the "${config.documentTitle}" using the submit_bri
 QUESTIONS TO FILL:
 ${questionSchema}`;
 
+    // Always-on, prompt-cached client brand context (omitted when no client / no authored content).
+    const clientConfig = clientId ? getClientConfig(clientId) : undefined;
+    const clientContext = clientConfig ? buildClientContextBlock(clientConfig) : null;
+
     const systemBlocks: Anthropic.TextBlockParam[] = [
       { type: 'text', text: baseStrategicPrompt, cache_control: { type: 'ephemeral' } },
+      ...(clientContext ? [{ type: 'text' as const, text: clientContext, cache_control: { type: 'ephemeral' as const } }] : []),
       { type: 'text', text: operationalRules },
     ];
 

@@ -10,6 +10,7 @@ import type { PrefillResult } from '@/lib/questions/agency';
 
 interface AgencyIntakeProps {
   briefType: string;
+  clientId?: string;
   documentTitle: string;
   onPrefillComplete: (params: { corpus: string; voiceTranscript: string; textNotes: string; answers: PrefillResult }) => void;
   onSkip: () => void;
@@ -22,7 +23,7 @@ interface UploadedFile {
   error?: string;
 }
 
-export function AgencyIntake({ briefType, documentTitle, onPrefillComplete, onSkip }: AgencyIntakeProps) {
+export function AgencyIntake({ briefType, clientId, documentTitle, onPrefillComplete, onSkip }: AgencyIntakeProps) {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [textNotes, setTextNotes] = useState('');
   const [voiceTranscript, setVoiceTranscript] = useState('');
@@ -120,7 +121,7 @@ export function AgencyIntake({ briefType, documentTitle, onPrefillComplete, onSk
       const prefillRes = await fetch('/api/agency/prefill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ briefType, corpus, voiceTranscript, textNotes }),
+        body: JSON.stringify({ briefType, clientId, corpus, voiceTranscript, textNotes }),
       });
 
       if (!prefillRes.ok) {

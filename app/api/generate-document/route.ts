@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, Table, TableCell, TableRow, WidthType, BorderStyle, ImageRun, Header, TabStopPosition, TabStopType } from 'docx';
 import { getBriefConfig } from '@/lib/questions';
 import { getAgencyBriefConfig } from '@/lib/questions/agency';
+import { getClientConfig } from '@/lib/clients';
 import fs from 'fs';
 import path from 'path';
 
@@ -232,8 +233,9 @@ function buildSectionForQuestion(
 
 export async function POST(req: Request) {
     try {
-        const { briefType, responses, briefSource } = (await req.json()) as {
+        const { briefType, clientId, responses, briefSource } = (await req.json()) as {
             briefType?: string;
+            clientId?: string;
             responses: Record<string, string>;
             briefSource?: BriefSource;
         };
@@ -291,10 +293,35 @@ export async function POST(req: Request) {
                 }),
             );
         } else {
-            headerChildren.push(
-                new TextRun({ text: '\t' }),
-                new TextRun({ text: 'IMPACT BBDO', bold: true, size: 22, font: 'Arial' }),
-            );
+            // Agency flow: brand the header per client when one is selected.
+            const clientConfig = clientId ? getClientConfig(clientId) : undefined;
+            let clientLogoEmbedded = false;
+
+            if (clientConfig?.logo) {
+                try {
+                    const logoData = fs.readFileSync(path.join(process.cwd(), 'public', clientConfig.logo));
+                    const ext = path.extname(clientConfig.logo).toLowerCase();
+                    headerChildren.push(
+                        new TextRun({ text: '\t' }),
+                        new ImageRun({
+                            data: logoData,
+                            transformation: { width: clientConfig.logoWidth ?? 100, height: clientConfig.logoHeight ?? 26 },
+                            type: ext === '.jpg' || ext === '.jpeg' ? 'jpg' : 'png',
+                        }),
+                    );
+                    clientLogoEmbedded = true;
+                } catch (err) {
+                    // Logo asset missing/unreadable — fall back to the client name below.
+                    console.warn(`Client logo not embedded for "${clientConfig.id}":`, err instanceof Error ? err.message : err);
+                }
+            }
+
+            if (!clientLogoEmbedded) {
+                headerChildren.push(
+                    new TextRun({ text: '\t' }),
+                    new TextRun({ text: clientConfig?.label || 'IMPACT BBDO', bold: true, size: 22, font: 'Arial' }),
+                );
+            }
         }
 
         const doc = new Document({

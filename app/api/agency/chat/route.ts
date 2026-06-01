@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAgencyBriefConfig } from '@/lib/questions/agency';
+import { getClientConfig, buildClientContextBlock } from '@/lib/clients';
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_OUTPUT_TOKENS = 2048;
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
   try {
     const {
       briefType,
+      clientId,
       questionId,
       currentAnswer,
       corpus,
@@ -21,6 +23,7 @@ export async function POST(req: Request) {
       userMessage,
     } = (await req.json()) as {
       briefType: string;
+      clientId?: string;
       questionId: string;
       currentAnswer: string;
       corpus: string;
@@ -64,8 +67,13 @@ Interaction rules:
 3. When the user asks for a rewrite, an alternative, or to sharpen/expand the answer, call the propose_update tool with the suggested replacement text. The replacement must follow the strategic principles above.
 4. When the user is just asking a question or thinking out loud, reply normally without calling the tool.`;
 
+    // Always-on, prompt-cached client brand context (omitted when no client / no authored content).
+    const clientConfig = clientId ? getClientConfig(clientId) : undefined;
+    const clientContext = clientConfig ? buildClientContextBlock(clientConfig) : null;
+
     const systemBlocks: Anthropic.TextBlockParam[] = [
       { type: 'text', text: baseStrategicPrompt, cache_control: { type: 'ephemeral' } },
+      ...(clientContext ? [{ type: 'text' as const, text: clientContext, cache_control: { type: 'ephemeral' as const } }] : []),
       { type: 'text', text: chatRules },
     ];
 
