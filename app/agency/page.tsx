@@ -81,7 +81,7 @@ export default function AgencyDashboard() {
               {CLIENTS.map((c) => {
                 const accent = accentMap[c.color] || accentMap.purple;
                 return (
-                  <button key={c.id} onClick={() => setSelectedClient(c.id)} className="group text-left focus:outline-none">
+                  <button key={c.id} onClick={() => setSelectedClient(c.id)} className="group h-full text-left focus:outline-none">
                     <div className={`relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-slate-300 hover:shadow-xl ${accent.glow} cursor-pointer`}>
                       {/* Brand accent bar */}
                       <div className={`h-1.5 w-full bg-gradient-to-r ${accent.bar}`} />
@@ -105,7 +105,7 @@ export default function AgencyDashboard() {
                       <div className="flex flex-1 flex-col items-center px-5 pb-5 pt-3 text-center">
                         <h3 className="text-lg md:text-xl font-bold text-slate-800">{c.label}</h3>
                         <p className="mt-1 text-xs md:text-sm text-slate-500 leading-relaxed">{c.description}</p>
-                        <span className={`mt-4 inline-flex items-center gap-1 text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-400 transition-colors ${accent.text}`}>
+                        <span className={`mt-auto pt-4 inline-flex items-center gap-1 text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-400 transition-colors ${accent.text}`}>
                           Select
                           <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
                         </span>
