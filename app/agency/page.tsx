@@ -23,6 +23,8 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; hover
   orange: { bg: 'bg-orange-50', border: 'border-orange-200 hover:border-orange-400', icon: 'text-orange-600 bg-orange-100', hover: 'hover:shadow-orange-200/50' },
   pink: { bg: 'bg-pink-50', border: 'border-pink-200 hover:border-pink-400', icon: 'text-pink-600 bg-pink-100', hover: 'hover:shadow-pink-200/50' },
   teal: { bg: 'bg-teal-50', border: 'border-teal-200 hover:border-teal-400', icon: 'text-teal-600 bg-teal-100', hover: 'hover:shadow-teal-200/50' },
+  yellow: { bg: 'bg-yellow-50', border: 'border-yellow-200 hover:border-yellow-400', icon: 'text-yellow-600 bg-yellow-100', hover: 'hover:shadow-yellow-200/50' },
+  red: { bg: 'bg-red-50', border: 'border-red-200 hover:border-red-400', icon: 'text-red-600 bg-red-100', hover: 'hover:shadow-red-200/50' },
 };
 
 // Brand accent used only on the client picker cards (top bar + hover glow/text).
@@ -31,6 +33,8 @@ const accentMap: Record<string, { bar: string; glow: string; text: string }> = {
   orange: { bar: 'from-orange-400 to-orange-600', glow: 'hover:shadow-orange-200/60', text: 'group-hover:text-orange-600' },
   pink: { bar: 'from-pink-400 to-pink-600', glow: 'hover:shadow-pink-200/60', text: 'group-hover:text-pink-600' },
   teal: { bar: 'from-teal-400 to-teal-600', glow: 'hover:shadow-teal-200/60', text: 'group-hover:text-teal-600' },
+  yellow: { bar: 'from-yellow-300 to-yellow-500', glow: 'hover:shadow-yellow-200/60', text: 'group-hover:text-yellow-600' },
+  red: { bar: 'from-red-400 to-red-600', glow: 'hover:shadow-red-200/60', text: 'group-hover:text-red-600' },
 };
 
 export default function AgencyDashboard() {
