@@ -77,7 +77,7 @@ export const sadiaConfig: ClientConfig = {
   label: 'Sadia',
   description: 'Briefs for the Sadia brand — tailored to its proposition and tone of voice.',
   icon: 'Beef',
-  color: 'pink',
+  color: 'yellow',
   logo: 'clients/sadia.png',
   logoWidth: 50,
   logoHeight: 37, // 199×148 aspect

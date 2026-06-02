@@ -3,9 +3,9 @@ import type { ClientConfig } from './types';
 export const internalImpactConfig: ClientConfig = {
   id: 'internal-impact-bbdo',
   label: 'Internal — Impact BBDO',
-  description: 'Internal agency briefs for Impact BBDO — no external client brand applied.',
+  description: 'Internal agency briefs for Pitches and Special projects.',
   icon: 'Building2',
-  color: 'purple',
+  color: 'red',
   logo: 'impact-bbdo-logo.png', // shared black+red lockup, also used in the page header
   logoWidth: 100,
   logoHeight: 15, // 4640×674 aspect
