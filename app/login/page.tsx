@@ -82,6 +82,9 @@ function LoginInner() {
             No account?{' '}
             <Link href="/signup" className="font-bold text-orange-600 hover:text-orange-700 underline underline-offset-2">Create one</Link>
           </p>
+          <p className="text-center text-sm text-slate-500 mt-2">
+            <Link href="/change-password" className="font-medium text-slate-600 hover:text-slate-800 underline underline-offset-2">Change password</Link>
+          </p>
         </CardContent>
       </Card>
     </main>

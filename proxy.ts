@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE, verifySession } from '@/lib/session';
 
-// Public pages that never require a session.
+// Public pages for logged-out users (redirected to /agency if already signed in).
 const PUBLIC_PAGES = ['/login', '/signup'];
+// Pages reachable in BOTH states (no redirect either way).
+const OPEN_PAGES = ['/change-password'];
 
 // Next internals, static assets, auth endpoints and metadata icons are never gated.
 const ALWAYS_ALLOW = /^\/(?:_next\/|favicon\.ico$|icon$|.*\/icon\.ico$|api\/auth\/)/;
@@ -14,6 +16,11 @@ export async function proxy(req: NextRequest) {
 
   // Bail early on anything that isn't an app page/API request.
   if (ALWAYS_ALLOW.test(pathname) || STATIC_FILE.test(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Open pages are reachable whether signed in or not.
+  if (OPEN_PAGES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return NextResponse.next();
   }
 
