@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // mssql/tedious use dynamic requires; keep them external to the server bundle.
+  serverExternalPackages: ["mssql", "tedious"],
 };
 
 export default nextConfig;

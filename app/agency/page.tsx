@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
+import { LogoutButton } from '@/components/LogoutButton';
 import { AGENCY_BRIEF_TYPES } from '@/lib/questions/agency';
 import { CLIENTS } from '@/lib/clients';
 import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2 } from 'lucide-react';
@@ -43,6 +44,9 @@ export default function AgencyDashboard() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 md:p-8 lg:p-24" style={{ backgroundColor: '#d9d8d8' }}>
+      <div className="absolute right-3 top-3 md:right-6 md:top-6 z-20">
+        <LogoutButton />
+      </div>
       <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mb-6 md:mb-8 z-10">
         <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={464} height={67} priority className="h-[22px] md:h-[34px] w-auto" />
         <div className="flex items-center gap-2 md:gap-3">
