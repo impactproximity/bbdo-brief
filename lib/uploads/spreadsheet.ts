@@ -2,7 +2,7 @@
  * Server-side spreadsheet -> plain text extraction.
  *
  * The output feeds an LLM prompt, so it is flattened to delimited rows grouped
- * by sheet, and hard-capped: a 5 MB workbook can hold millions of cells, which
+ * by sheet, and hard-capped: an upload-sized workbook can hold millions of cells, which
  * would otherwise blow past the model's context window.
  */
 
