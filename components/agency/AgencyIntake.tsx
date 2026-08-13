@@ -7,6 +7,13 @@ import { Progress } from '@/components/ui/progress';
 import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { Upload, FileText, X, Loader2, Sparkles, Mic, ArrowRight } from 'lucide-react';
 import type { PrefillResult } from '@/lib/questions/agency';
+import {
+  FILE_ACCEPT_ATTR,
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_LABEL,
+  SUPPORTED_FORMATS_LABEL,
+  resolveFileKind,
+} from '@/lib/uploads/supported-files';
 
 interface AgencyIntakeProps {
   briefType: string;
@@ -33,22 +40,17 @@ export function AgencyIntake({ briefType, clientId, documentTitle, onPrefillComp
   const [statusText, setStatusText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const ALLOWED_TYPES = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ];
-  const MAX_FILE_BYTES = 5 * 1024 * 1024;
-
   const handleFilesSelected = (selected: FileList | null) => {
     if (!selected) return;
     const next: UploadedFile[] = [];
     for (const f of Array.from(selected)) {
-      if (!ALLOWED_TYPES.includes(f.type)) {
-        next.push({ file: f, status: 'error', error: 'Only PDF or DOCX allowed' });
+      const resolved = resolveFileKind(f.name, f.type);
+      if (!resolved.ok) {
+        next.push({ file: f, status: 'error', error: resolved.error });
         continue;
       }
-      if (f.size > MAX_FILE_BYTES) {
-        next.push({ file: f, status: 'error', error: 'File exceeds 5 MB limit' });
+      if (f.size > MAX_UPLOAD_BYTES) {
+        next.push({ file: f, status: 'error', error: `File exceeds ${MAX_UPLOAD_LABEL} limit` });
         continue;
       }
       next.push({ file: f, status: 'pending' });
@@ -147,7 +149,7 @@ export function AgencyIntake({ briefType, clientId, documentTitle, onPrefillComp
       <div className="text-center">
         <h2 className="text-xl md:text-2xl font-bold text-slate-800 mb-1">Have materials? Drop them in.</h2>
         <p className="text-sm md:text-base text-slate-600">
-          Decks, transcripts, client emails, scripts — any PDF or DOCX. Optional voice or text notes too. We&apos;ll draft a starting {documentTitle}.
+          Decks, transcripts, client emails, scripts, data sheets — any {SUPPORTED_FORMATS_LABEL}. Optional voice or text notes too. We&apos;ll draft a starting {documentTitle}.
         </p>
         <p className="text-xs md:text-sm text-slate-500 mt-1.5 italic">
           No documents? No problem — skip below and answer each question manually with voice or text.
@@ -172,7 +174,7 @@ export function AgencyIntake({ briefType, clientId, documentTitle, onPrefillComp
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept={FILE_ACCEPT_ATTR}
           multiple
           className="hidden"
           onChange={(e) => handleFilesSelected(e.target.files)}
@@ -180,7 +182,7 @@ export function AgencyIntake({ briefType, clientId, documentTitle, onPrefillComp
         />
         <Upload className="h-8 w-8 md:h-10 md:w-10 mx-auto mb-2 text-slate-400" />
         <p className="font-bold text-slate-700 text-sm md:text-base">Click or drop files</p>
-        <p className="text-xs md:text-sm text-slate-500 mt-0.5">PDF or DOCX, up to 5 MB each</p>
+        <p className="text-xs md:text-sm text-slate-500 mt-0.5">{SUPPORTED_FORMATS_LABEL}, up to {MAX_UPLOAD_LABEL} each</p>
       </div>
 
       {/* File list */}

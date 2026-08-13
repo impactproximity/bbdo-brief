@@ -4,6 +4,13 @@ import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  FILE_ACCEPT_ATTR,
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_LABEL,
+  SUPPORTED_FORMATS_LABEL,
+  resolveFileKind,
+} from '@/lib/uploads/supported-files';
 
 interface DocumentUploaderProps {
   onUploadComplete: (userInput: string, enhancedResponse: string) => void;
@@ -22,14 +29,20 @@ export function DocumentUploader({
   const [statusText, setStatusText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
-    if (file && file.size > MAX_FILE_SIZE) {
-      alert('File size exceeds 1 MB. Please upload a smaller file.');
-      e.target.value = '';
-      return;
+    if (file) {
+      const resolved = resolveFileKind(file.name, file.type);
+      if (!resolved.ok) {
+        alert(resolved.error);
+        e.target.value = '';
+        return;
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        alert(`File size exceeds ${MAX_UPLOAD_LABEL}. Please upload a smaller file.`);
+        e.target.value = '';
+        return;
+      }
     }
     setSelectedFile(file);
     setStatusText('');
@@ -113,7 +126,7 @@ export function DocumentUploader({
           <>
             <Upload className="h-10 w-10 text-slate-400" />
             <p className="text-sm font-semibold text-slate-600">Click to select a file</p>
-            <p className="text-xs text-slate-400">PDF or DOCX only · Max 1 MB</p>
+            <p className="text-xs text-slate-400">{SUPPORTED_FORMATS_LABEL} · Max {MAX_UPLOAD_LABEL}</p>
           </>
         )}
       </div>
@@ -121,7 +134,7 @@ export function DocumentUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        accept={FILE_ACCEPT_ATTR}
         className="hidden"
         onChange={handleFileChange}
         disabled={isProcessing}
