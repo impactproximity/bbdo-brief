@@ -46,9 +46,13 @@ export const FILE_ACCEPT_ATTR = [
 /** Human-readable list for UI copy. */
 export const SUPPORTED_FORMATS_LABEL = 'PDF, DOCX, XLSX or CSV';
 
-/** Upload ceiling. Kept here so every entry point enforces the same number. */
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-export const MAX_UPLOAD_LABEL = '5 MB';
+/**
+ * Upload ceiling, per file. Kept here so every entry point enforces the same
+ * number. Well under the 100 MB Vercel Functions request-body limit; the real
+ * constraint is the model context window the extracted text ends up in.
+ */
+export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+export const MAX_UPLOAD_LABEL = '15 MB';
 
 function extensionOf(fileName: string): string {
   const dot = fileName.lastIndexOf('.');

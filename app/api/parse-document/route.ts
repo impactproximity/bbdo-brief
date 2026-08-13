@@ -2,8 +2,19 @@ import { NextResponse } from 'next/server';
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, resolveFileKind } from '@/lib/uploads/supported-files';
 import { parseCsv, parseXlsx } from '@/lib/uploads/spreadsheet';
 
+// Multipart framing (boundaries, part headers) adds a little on top of the file itself.
+const MULTIPART_OVERHEAD_ALLOWANCE = 1024 * 1024;
+
 export async function POST(req: Request) {
     try {
+        // Reject on Content-Length before reading the body. Past the proxy buffer
+        // limit the body arrives truncated and formData() throws an opaque parse
+        // error, so this has to happen first to produce a useful message.
+        const declaredLength = Number(req.headers.get('content-length') ?? 0);
+        if (declaredLength > MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_ALLOWANCE) {
+            return NextResponse.json({ error: `File size exceeds ${MAX_UPLOAD_LABEL} limit.` }, { status: 413 });
+        }
+
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
 
