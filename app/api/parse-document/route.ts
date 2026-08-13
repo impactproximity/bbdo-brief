@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, resolveFileKind } from '@/lib/uploads/supported-files';
+import { parseCsv, parseXlsx } from '@/lib/uploads/spreadsheet';
 
 export async function POST(req: Request) {
     try {
@@ -9,31 +11,40 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
         }
 
-        const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-        if (file.size > MAX_SIZE) {
-            return NextResponse.json({ error: 'File size exceeds 5 MB limit.' }, { status: 400 });
+        if (file.size > MAX_UPLOAD_BYTES) {
+            return NextResponse.json({ error: `File size exceeds ${MAX_UPLOAD_LABEL} limit.` }, { status: 400 });
         }
 
-        const mimeType = file.type;
-        const isPdf = mimeType === 'application/pdf';
-        const isDocx = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-        if (!isPdf && !isDocx) {
-            return NextResponse.json({ error: 'Unsupported file type. Please upload a PDF or DOCX file.' }, { status: 400 });
+        const resolved = resolveFileKind(file.name ?? '', file.type);
+        if (!resolved.ok) {
+            return NextResponse.json({ error: resolved.error }, { status: 400 });
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
         let text = '';
 
-        if (isPdf) {
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
-            const result = await pdfParse(buffer);
-            text = result.text;
-        } else {
-            const mammoth = await import('mammoth');
-            const result = await mammoth.extractRawText({ buffer });
-            text = result.value;
+        switch (resolved.kind) {
+            case 'pdf': {
+                // eslint-disable-next-line @typescript-eslint/no-require-imports
+                const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
+                const result = await pdfParse(buffer);
+                text = result.text;
+                break;
+            }
+            case 'docx': {
+                const mammoth = await import('mammoth');
+                const result = await mammoth.extractRawText({ buffer });
+                text = result.value;
+                break;
+            }
+            case 'xlsx': {
+                text = await parseXlsx(buffer);
+                break;
+            }
+            case 'csv': {
+                text = parseCsv(buffer.toString('utf8'));
+                break;
+            }
         }
 
         return NextResponse.json({ text });
