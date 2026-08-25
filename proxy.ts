@@ -5,7 +5,9 @@ import { SESSION_COOKIE, verifySession } from '@/lib/session';
 // Public pages for logged-out users (redirected to /agency if already signed in).
 const PUBLIC_PAGES = ['/login', '/signup'];
 // Pages reachable in BOTH states (no redirect either way).
-const OPEN_PAGES = ['/change-password'];
+// /change-password is NOT here: it identifies the user from the session cookie
+// rather than a current password, so it must be signed-in only.
+const OPEN_PAGES: string[] = [];
 
 // Next internals, static assets, auth endpoints and metadata icons are never gated.
 const ALWAYS_ALLOW = /^\/(?:_next\/|favicon\.ico$|icon$|.*\/icon\.ico$|api\/auth\/)/;
