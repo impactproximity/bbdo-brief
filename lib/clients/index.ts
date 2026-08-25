@@ -2,6 +2,7 @@ import type { ClientConfig } from './types';
 import { starbucksConfig } from './starbucks';
 import { sadiaConfig } from './sadia';
 import { internalImpactConfig } from './internal-impact-bbdo';
+import { socialImpactConfig } from './social-impact-bbdo';
 
 export type { ClientConfig } from './types';
 
@@ -9,6 +10,7 @@ const clients: Record<string, ClientConfig> = {
   starbucks: starbucksConfig,
   sadia: sadiaConfig,
   'internal-impact-bbdo': internalImpactConfig,
+  'social-impact-bbdo': socialImpactConfig,
 };
 
 // For the dashboard cards (parallels AGENCY_BRIEF_TYPES).

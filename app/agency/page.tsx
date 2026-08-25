@@ -5,9 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { LogoutButton } from '@/components/LogoutButton';
-import { AGENCY_BRIEF_TYPES } from '@/lib/questions/agency';
+import { getBriefTypesForClient } from '@/lib/questions/agency';
 import { CLIENTS } from '@/lib/clients';
-import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, KeyRound } from 'lucide-react';
+import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, KeyRound, Repeat, Megaphone, Radio } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Lightbulb: <Lightbulb className="h-8 w-8" />,
@@ -17,6 +17,9 @@ const iconMap: Record<string, React.ReactNode> = {
   Coffee: <Coffee className="h-8 w-8" />,
   Beef: <Beef className="h-8 w-8" />,
   Building2: <Building2 className="h-8 w-8" />,
+  Repeat: <Repeat className="h-8 w-8" />,
+  Megaphone: <Megaphone className="h-8 w-8" />,
+  Radio: <Radio className="h-8 w-8" />,
 };
 
 const colorMap: Record<string, { bg: string; border: string; icon: string; hover: string }> = {
@@ -128,7 +131,7 @@ export default function AgencyDashboard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              {AGENCY_BRIEF_TYPES.map((tier) => {
+              {getBriefTypesForClient(client.id).map((tier) => {
                 const colors = colorMap[tier.color] || colorMap.purple;
                 return (
                   <Link key={tier.id} href={`/agency/brief/${tier.id}?client=${client.id}`}>

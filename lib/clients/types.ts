@@ -6,6 +6,14 @@ export interface ClientConfig {
   icon: string; // key into dashboard iconMap (lucide name)
   color: string; // 'purple' | 'orange' | 'pink' | 'teal'
 
+  /**
+   * Optional allow-list of agency brief-type ids this client may raise, in display order.
+   * Omit it and the client gets DEFAULT_AGENCY_BRIEF_TYPE_IDS (the four standard tiers).
+   * Deliberately `string[]` rather than the tier-id union: importing that union from
+   * lib/questions/agency would invert the dependency edge between the two modules.
+   */
+  briefTypes?: string[];
+
   // --- Branding asset for the .docx header (and optionally the dashboard card) ---
   logo?: string; // path under public/, e.g. 'clients/starbucks.png'. When absent, header falls back to a name TextRun.
   logoWidth?: number; // optional ImageRun width  (default ~100)

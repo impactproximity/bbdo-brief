@@ -3,23 +3,25 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, KeyRound, CheckCircle2 } from 'lucide-react';
 
 export default function ChangePasswordPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
-  const [emailLocked, setEmailLocked] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
+  const [checkingSession, setCheckingSession] = useState(true);
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Prefill + lock the email when the user is already signed in.
+  // Identity comes from the session — the API reads the email from the cookie, never
+  // from the form. Anyone not signed in has nothing to prove who they are, so send
+  // them to sign in first.
   useEffect(() => {
     (async () => {
       try {
@@ -28,15 +30,16 @@ export default function ChangePasswordPage() {
           const data = await res.json();
           if (data.email) {
             setEmail(data.email);
-            setEmailLocked(true);
-            setLoggedIn(true);
+            setCheckingSession(false);
+            return;
           }
         }
       } catch {
-        /* not logged in — leave email editable */
+        /* fall through to the redirect below */
       }
+      router.replace('/login?redirect=%2Fchange-password');
     })();
-  }, []);
+  }, [router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +57,7 @@ export default function ChangePasswordPage() {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, currentPassword, newPassword }),
+        body: JSON.stringify({ newPassword }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -69,6 +72,14 @@ export default function ChangePasswordPage() {
     }
   }
 
+  if (checkingSession) {
+    return (
+      <main className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#d9d8d8' }}>
+        <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
+      </main>
+    );
+  }
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4" style={{ backgroundColor: '#d9d8d8' }}>
       <div className="mb-6 md:mb-8">
@@ -81,27 +92,21 @@ export default function ChangePasswordPage() {
             <div className="text-center">
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
               <h1 className="text-2xl font-bold text-slate-800 mb-2">Password updated</h1>
-              <p className="text-sm text-slate-600 mb-6">You can now sign in with your new password.</p>
-              <Link href={loggedIn ? '/agency' : '/login'}>
+              <p className="text-sm text-slate-600 mb-6">Your new password is active from now on.</p>
+              <Link href="/agency">
                 <Button size="lg" className="w-full bg-gradient-to-br from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-bold rounded-xl py-5 border-2 border-slate-800">
-                  {loggedIn ? 'Back to dashboard' : 'Go to sign in'}
+                  Back to dashboard
                 </Button>
               </Link>
             </div>
           ) : (
             <>
               <h1 className="text-2xl md:text-3xl font-bold text-slate-800 text-center mb-1">Change password</h1>
-              <p className="text-sm text-slate-500 text-center mb-6">Enter your current password to set a new one.</p>
+              <p className="text-sm text-slate-500 text-center mb-6">
+                Signed in as <span className="font-bold text-slate-700">{email}</span>
+              </p>
 
               <form onSubmit={onSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Email</label>
-                  <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} readOnly={emailLocked} placeholder="you@company.com" className={`h-11 border-2 border-slate-200 focus-visible:border-orange-400 ${emailLocked ? 'bg-slate-100 text-slate-500' : ''}`} disabled={loading} />
-                </div>
-                <div>
-                  <label htmlFor="current" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Current password</label>
-                  <Input id="current" type="password" autoComplete="current-password" required value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" className="h-11 border-2 border-slate-200 focus-visible:border-orange-400" disabled={loading} />
-                </div>
                 <div>
                   <label htmlFor="new" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">New password</label>
                   <Input id="new" type="password" autoComplete="new-password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 8 characters" className="h-11 border-2 border-slate-200 focus-visible:border-orange-400" disabled={loading} />
@@ -122,8 +127,8 @@ export default function ChangePasswordPage() {
               </form>
 
               <p className="text-center text-sm text-slate-500 mt-6">
-                <Link href={loggedIn ? '/agency' : '/login'} className="font-bold text-orange-600 hover:text-orange-700 underline underline-offset-2">
-                  {loggedIn ? 'Back to dashboard' : 'Back to sign in'}
+                <Link href="/agency" className="font-bold text-orange-600 hover:text-orange-700 underline underline-offset-2">
+                  Back to dashboard
                 </Link>
               </p>
             </>
