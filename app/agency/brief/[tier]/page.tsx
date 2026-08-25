@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { getAgencyBriefConfig, type PrefillResult } from '@/lib/questions/agency';
+import { getAgencyBriefConfig, isBriefTypeAllowedForClient, type PrefillResult } from '@/lib/questions/agency';
 import { getClientConfig } from '@/lib/clients';
 import { AgencyIntake } from '@/components/agency/AgencyIntake';
 import { AgencyReview } from '@/components/agency/AgencyReview';
@@ -20,17 +20,20 @@ function AgencyBriefInner({ tier }: { tier: string }) {
   const clientId = searchParams.get('client') ?? undefined;
   const clientConfig = clientId ? getClientConfig(clientId) : undefined;
   const config = getAgencyBriefConfig(tier);
+  // The tier must also be one this client is actually scoped to raise.
+  const tierAllowed = isBriefTypeAllowedForClient(tier, clientId);
 
   const [step, setStep] = useState<Step>('intake');
   const [corpus, setCorpus] = useState('');
   const [answers, setAnswers] = useState<PrefillResult>({});
 
-  // A brief must be reached with a valid client; otherwise send the user back to pick one.
+  // A brief must be reached with a valid client AND a tier that client is scoped to;
+  // otherwise send the user back to pick one.
   useEffect(() => {
-    if (!config || !clientConfig) router.replace('/agency');
-  }, [config, clientConfig, router]);
+    if (!config || !clientConfig || !tierAllowed) router.replace('/agency');
+  }, [config, clientConfig, tierAllowed, router]);
 
-  if (!config || !clientConfig) return null;
+  if (!config || !clientConfig || !tierAllowed) return null;
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-start p-4 md:p-8 lg:p-16" style={{ backgroundColor: '#d9d8d8' }}>
