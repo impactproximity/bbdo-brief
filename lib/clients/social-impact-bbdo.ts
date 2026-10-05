@@ -6,9 +6,9 @@ export const socialImpactConfig: ClientConfig = {
   description: 'Social briefs on the Big Things in Motion standard — one template per track.',
   icon: 'Share2', // fallback only; the card renders the logo when one is set
   color: 'purple',
-  logo: 'impact-bbdo-logo.png', // shared black+red lockup. Must stay .png — the DOCX
-  logoWidth: 100, //             ImageRun labels every non-jpg as png, so .webp corrupts the header.
-  logoHeight: 15, // 4640×674 aspect
+  logo: 'impact-bbdo-logo.png', // stacked black+red lockup. Must stay .png — the DOCX
+  logoWidth: 72, //              ImageRun labels every non-jpg as png, so .webp corrupts the header.
+  logoHeight: 30, // 1575×654 aspect
 
   // Scoped: this client sees ONLY the three social tracks, never the four standard tiers.
   briefTypes: ['social-always-on', 'social-campaign', 'social-live'],

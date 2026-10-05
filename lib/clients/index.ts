@@ -3,6 +3,7 @@ import { starbucksConfig } from './starbucks';
 import { sadiaConfig } from './sadia';
 import { internalImpactConfig } from './internal-impact-bbdo';
 import { socialImpactConfig } from './social-impact-bbdo';
+import { pandoConfig } from './p-and-o';
 
 export type { ClientConfig } from './types';
 
@@ -11,6 +12,7 @@ const clients: Record<string, ClientConfig> = {
   sadia: sadiaConfig,
   'internal-impact-bbdo': internalImpactConfig,
   'social-impact-bbdo': socialImpactConfig,
+  'p-and-o': pandoConfig,
 };
 
 // For the dashboard cards (parallels AGENCY_BRIEF_TYPES).

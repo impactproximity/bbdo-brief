@@ -38,7 +38,7 @@ function AgencyBriefInner({ tier }: { tier: string }) {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-start p-4 md:p-8 lg:p-16" style={{ backgroundColor: '#d9d8d8' }}>
       <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mb-6 md:mb-8 z-10">
-        <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={464} height={67} priority className="h-[22px] md:h-[34px] w-auto" />
+        <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={315} height={131} priority className="h-[34px] md:h-[52px] w-auto" />
         <div className="flex items-center gap-2 md:gap-3">
           <div className="h-8 md:h-10 w-px bg-slate-400"></div>
           <div className="flex items-center gap-1.5 md:gap-2">

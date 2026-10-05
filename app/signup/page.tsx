@@ -50,7 +50,7 @@ export default function SignupPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4" style={{ backgroundColor: '#d9d8d8' }}>
       <div className="mb-6 md:mb-8">
-        <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={464} height={67} priority className="h-[26px] md:h-[34px] w-auto" />
+        <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={315} height={131} priority className="h-[38px] md:h-[52px] w-auto" />
       </div>
 
       <Card className="w-full max-w-md shadow-[0_20px_60px_rgba(0,0,0,0.15)] border-2 border-slate-300 rounded-2xl md:rounded-3xl">
