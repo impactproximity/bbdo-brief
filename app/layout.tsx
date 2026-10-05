@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shamal - Project Brief Creator",
+  title: "BBDO - Project Brief Creator",
   description: "Create professional project briefs with voice input",
 };
 

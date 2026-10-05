@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LogoutButton } from '@/components/LogoutButton';
 import { getBriefTypesForClient } from '@/lib/questions/agency';
 import { CLIENTS } from '@/lib/clients';
-import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, KeyRound, Repeat, Megaphone, Radio } from 'lucide-react';
+import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, KeyRound, Repeat, Megaphone, Radio, Ship } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Lightbulb: <Lightbulb className="h-8 w-8" />,
@@ -20,6 +20,7 @@ const iconMap: Record<string, React.ReactNode> = {
   Repeat: <Repeat className="h-8 w-8" />,
   Megaphone: <Megaphone className="h-8 w-8" />,
   Radio: <Radio className="h-8 w-8" />,
+  Ship: <Ship className="h-8 w-8" />,
 };
 
 const colorMap: Record<string, { bg: string; border: string; icon: string; hover: string }> = {
@@ -58,7 +59,7 @@ export default function AgencyDashboard() {
         <LogoutButton />
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mb-6 md:mb-8 z-10">
-        <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={464} height={67} priority className="h-[22px] md:h-[34px] w-auto" />
+        <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={315} height={131} priority className="h-[34px] md:h-[52px] w-auto" />
         <div className="flex items-center gap-2 md:gap-3">
           <div className="h-8 md:h-10 w-px bg-slate-400"></div>
           <div className="flex items-center gap-1.5 md:gap-2">
