@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LogoutButton } from '@/components/LogoutButton';
 import { getBriefTypesForClient } from '@/lib/questions/agency';
 import { CLIENTS } from '@/lib/clients';
-import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, KeyRound, Repeat, Megaphone, Radio, Ship } from 'lucide-react';
+import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, KeyRound, Repeat, Megaphone, Radio, Ship, History } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Lightbulb: <Lightbulb className="h-8 w-8" />,
@@ -49,6 +49,13 @@ export default function AgencyDashboard() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 md:p-8 lg:p-24" style={{ backgroundColor: '#d9d8d8' }}>
       <div className="absolute right-3 top-3 md:right-6 md:top-6 z-20 flex items-center gap-2">
+        <Link
+          href="/agency/briefs"
+          className="inline-flex items-center gap-1.5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"
+        >
+          <History className="h-3.5 w-3.5" />
+          My briefs
+        </Link>
         <Link
           href="/change-password"
           className="inline-flex items-center gap-1.5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"

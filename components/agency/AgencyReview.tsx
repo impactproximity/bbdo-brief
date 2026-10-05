@@ -3,10 +3,13 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ChevronLeft, ChevronRight, CheckCircle2, Download, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, Download, Loader2, AlertCircle, Save, Check } from 'lucide-react';
 import type { AgencyBriefConfig, PrefillResult } from '@/lib/questions/agency';
 import { AnswerCard } from './AnswerCard';
 import { QuestionChatPanel } from './QuestionChatPanel';
+
+/** Mirrors the page-level autosave state so the footer can show what persistence is doing. */
+export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 interface AgencyReviewProps {
   briefType: string;
@@ -14,9 +17,30 @@ interface AgencyReviewProps {
   config: AgencyBriefConfig;
   corpus: string;
   initialAnswers: PrefillResult;
+  /**
+   * Called on every answer edit with the FULL next answers object. The page owns
+   * persistence, so without this the autosave would only ever see the original
+   * prefill and silently lose every subsequent edit.
+   */
+  onAnswersChange?: (answers: PrefillResult) => void;
+  /** Explicit "Save" — moves the brief from in_progress to saved. */
+  onSaveDraft?: () => void | Promise<void>;
+  /** Fired only after the DOCX generates successfully — moves the brief to submitted. */
+  onGenerated?: () => void | Promise<void>;
+  saveState?: SaveState;
 }
 
-export function AgencyReview({ briefType, clientId, config, corpus, initialAnswers }: AgencyReviewProps) {
+export function AgencyReview({
+  briefType,
+  clientId,
+  config,
+  corpus,
+  initialAnswers,
+  onAnswersChange,
+  onSaveDraft,
+  onGenerated,
+  saveState = 'idle',
+}: AgencyReviewProps) {
   const QUESTIONS = config.questions;
   const [answers, setAnswers] = useState<PrefillResult>(initialAnswers);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -44,16 +68,22 @@ export function AgencyReview({ briefType, clientId, config, corpus, initialAnswe
   const currentQuestion = QUESTIONS[currentIdx];
   const currentAnswer = answers[currentQuestion.id];
 
+  // The single write path for answers — used by both AnswerCard.onSave and
+  // QuestionChatPanel.onApplySuggestion. `next` is computed from the current state rather
+  // than inside a functional updater so the change can be handed to the page (for autosave)
+  // without running a side effect during the state update.
   const updateAnswer = (qid: string, value: string) => {
-    setAnswers((prev) => ({
-      ...prev,
+    const next: PrefillResult = {
+      ...answers,
       [qid]: {
         value,
-        confidence: prev[qid]?.confidence || 'high',
+        confidence: answers[qid]?.confidence || 'high',
         missing: !value.trim(),
-        suggestion: prev[qid]?.suggestion,
+        suggestion: answers[qid]?.suggestion,
       },
-    }));
+    };
+    setAnswers(next);
+    onAnswersChange?.(next);
   };
 
   const navigateTo = (idx: number) => {
@@ -95,6 +125,10 @@ export function AgencyReview({ briefType, clientId, config, corpus, initialAnswe
       a.download = `${config.documentTitle.replace(/\s+/g, '_')}_${Date.now()}.docx`;
       a.click();
       URL.revokeObjectURL(url);
+
+      // Only after the document actually came back — a failed generation must not
+      // mark the brief submitted.
+      await onGenerated?.();
     } catch (err) {
       alert(`Failed to generate document: ${err instanceof Error ? err.message : 'unknown error'}`);
     } finally {
@@ -203,6 +237,24 @@ export function AgencyReview({ briefType, clientId, config, corpus, initialAnswe
         )}
       </div>
 
+      {/* Autosave indicator */}
+      {saveState !== 'idle' && (
+        <div className="flex justify-center">
+          <span
+            className={`inline-flex items-center gap-1.5 text-[11px] md:text-xs font-semibold ${
+              saveState === 'error' ? 'text-red-600' : 'text-slate-500'
+            }`}
+          >
+            {saveState === 'saving' && <Loader2 className="h-3 w-3 animate-spin" />}
+            {saveState === 'saved' && <Check className="h-3 w-3 text-green-600" />}
+            {saveState === 'error' && <AlertCircle className="h-3 w-3" />}
+            {saveState === 'saving' && 'Saving…'}
+            {saveState === 'saved' && 'All changes saved'}
+            {saveState === 'error' && 'Could not save — your answers are still here, but not stored yet'}
+          </span>
+        </div>
+      )}
+
       {/* Nav buttons */}
       <div className="flex justify-between items-center pt-3 md:pt-4 border-t-2 md:border-t-3 border-slate-200 gap-2">
         <Button
@@ -215,6 +267,19 @@ export function AgencyReview({ briefType, clientId, config, corpus, initialAnswe
           <ChevronLeft className="h-4 w-4 md:h-5 md:w-5 mr-1 md:mr-2" />
           Previous
         </Button>
+
+        {onSaveDraft && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => void onSaveDraft()}
+            disabled={saveState === 'saving'}
+            className="font-bold border-2 md:border-3 border-blue-400 text-blue-700 hover:bg-blue-50 hover:border-blue-500 disabled:opacity-40 rounded-xl md:rounded-2xl px-3 md:px-6 py-4 md:py-6 shadow-md text-xs md:text-base"
+          >
+            <Save className="h-4 w-4 md:h-5 md:w-5 mr-1 md:mr-2" />
+            Save
+          </Button>
+        )}
 
         {currentIdx < QUESTIONS.length - 1 ? (
           <Button
