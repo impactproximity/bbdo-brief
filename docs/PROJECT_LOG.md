@@ -297,6 +297,43 @@ in. Reported, never auto-deleted.
 preconditions the login route actually checks (active row + GoTrue credential) rather than
 putting unexpected login codes in real people's inboxes.
 
+---
+
+## Header toolbar — 2026-10-07
+
+"My briefs", "Usage" and "Log out" were invisible: they sat in an absolutely-positioned strip
+**outside** the white card, on the `#d9d8d8` grey background, as transparent pills with a
+`border-slate-300` outline. Moved into the white card header and restyled.
+
+`components/agency/AgencyToolbar.tsx` is now the single source of truth. The pill class string
+had been **copy-pasted 13 times across 7 files**, which is exactly why these drifted — import
+`TOOLBAR_PILL` rather than adding a fourteenth copy.
+
+### The first attempt was wrong, and the reason is worth keeping
+
+Version one mirrored the existing Back button: `absolute right-3 top-3`, opposite the
+`absolute left-3 top-3` every card header already had. It looked tidier and matched the
+design language — but the card titles are **centred and grow with their content**, so a long
+one ("Internal — Impact BBDO") slid straight underneath the pills. Not a mobile edge case:
+it was visibly broken at full desktop width.
+
+No amount of padding fixes that reliably, because title length is data, not layout. Replaced
+with a real flex **row** — back button left, pills right, title below. It cannot collide at
+any width or any title length. A mobile-only `pt-12` workaround added for the absolute
+version was removed as moot.
+
+Verified programmatically rather than by eye: a bounding-box intersection test between the
+title and every pill returns zero overlaps on all three pages, with no horizontal overflow.
+
+### Also fixed by moving the lookup into the shared component
+
+The `isAdmin` fetch previously lived only in `app/agency/page.tsx`, so `/agency/briefs` and
+`/agency/admin` had **no Usage link at all**. It now lives in `AgencyToolbar`, so the link
+appears consistently everywhere. Pages omit their own link via `showBriefs` / `showUsage`.
+
+Still presentational only — `requireAdmin()` remains the real gate. Re-verified after the
+move: a non-admin sees only "My briefs" and "Log out", and `/agency/admin` still blocks them.
+
 ## Open / next
 
 ### 1. Commit + PR everything — needs permission
