@@ -5,12 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { getAgencyBriefConfig, isBriefTypeAllowedForClient, type PrefillResult } from '@/lib/questions/agency';
 import { getClientConfig } from '@/lib/clients';
 import { AgencyIntake } from '@/components/agency/AgencyIntake';
 import { AgencyReview, type SaveState } from '@/components/agency/AgencyReview';
+import { TOOLBAR_PILL } from '@/components/agency/AgencyToolbar';
 import type { BriefStatus } from '@/lib/briefs/store';
 
 type Step = 'intake' | 'review';
@@ -206,11 +206,11 @@ function AgencyBriefInner({ tier }: { tier: string }) {
       <Card className="w-full max-w-6xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border-2 md:border-3 border-slate-300 overflow-hidden rounded-2xl md:rounded-3xl">
         <CardHeader className="text-center border-b-2 md:border-b-3 border-slate-300 bg-white pb-4 md:pb-6 pt-5 md:pt-8 px-4">
           <div className="flex items-center justify-center gap-3 mb-2 md:mb-3">
-            <Link href="/agency">
-              <Button variant="ghost" size="sm" className="rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm">
-                <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
-                Back
-              </Button>
+            {/* Shares the header pill style. Label stays at every width: this sits on its
+                own centred row rather than beside the toolbar, so nothing can collide. */}
+            <Link href="/agency" className={TOOLBAR_PILL}>
+              <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              Back
             </Link>
           </div>
           <p className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-orange-600 mb-1">
