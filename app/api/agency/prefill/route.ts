@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAgencyBriefConfig, type PrefillResult } from '@/lib/questions/agency';
 import { getClientConfig, buildClientContextBlock } from '@/lib/clients';
+import { getSession } from '@/lib/auth';
+import { anthropicUsage, recordUsage } from '@/lib/usage/record';
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_OUTPUT_TOKENS = 8192;
@@ -115,6 +117,21 @@ ${questionSchema}`;
           ],
         },
       ],
+    });
+
+    // Meter the call. Deliberately placed AFTER the mock short-circuit above, so a run
+    // without an API key — which never reaches the model — records no cost.
+    //
+    // No brief_id: prefill runs before the brief row is created (see the brief page, where
+    // "briefId is null until the row exists"), so this spend is attributed to
+    // user x client x tier instead. That is the one dimension this report cannot give you.
+    recordUsage({
+      route: 'agency/prefill',
+      provider: 'anthropic',
+      session: await getSession(),
+      clientId: clientId ?? null,
+      tier: briefType ?? null,
+      ...anthropicUsage(response),
     });
 
     const toolUse = response.content.find((b) => b.type === 'tool_use');

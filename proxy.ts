@@ -3,10 +3,8 @@ import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE, verifySession } from '@/lib/session';
 
 // Public pages for logged-out users (redirected to /agency if already signed in).
-const PUBLIC_PAGES = ['/login', '/signup'];
+const PUBLIC_PAGES = ['/login'];
 // Pages reachable in BOTH states (no redirect either way).
-// /change-password is NOT here: it identifies the user from the session cookie
-// rather than a current password, so it must be signed-in only.
 const OPEN_PAGES: string[] = [];
 
 // Next internals, static assets, auth endpoints and metadata icons are never gated.
@@ -32,7 +30,7 @@ export async function proxy(req: NextRequest) {
   const isPublicPage = PUBLIC_PAGES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (isPublicPage) {
-    // Already signed in → skip login/signup.
+    // Already signed in → skip login.
     if (session) return NextResponse.redirect(new URL('/agency', req.url));
     return NextResponse.next();
   }

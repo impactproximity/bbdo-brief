@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/LogoutButton';
-import { ArrowLeft, ArrowRight, FileText, Trash2, Loader2, KeyRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileText, Trash2, Loader2 } from 'lucide-react';
 import { getAgencyBriefConfig } from '@/lib/questions/agency';
 import { getClientConfig } from '@/lib/clients';
 import type { BriefStatus } from '@/lib/briefs/store';
@@ -87,13 +87,6 @@ export default function BriefHistoryPage() {
       style={{ backgroundColor: '#d9d8d8' }}
     >
       <div className="absolute right-3 top-3 md:right-6 md:top-6 z-20 flex items-center gap-2">
-        <Link
-          href="/change-password"
-          className="inline-flex items-center gap-1.5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"
-        >
-          <KeyRound className="h-3.5 w-3.5" />
-          Change password
-        </Link>
         <LogoutButton />
       </div>
 

@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getAdminClient, isSupabaseConfigured } from '@/lib/supabase/admin';
 import type { PrefillResult } from '@/lib/questions/agency';
 
 /**
@@ -11,8 +11,8 @@ import type { PrefillResult } from '@/lib/questions/agency';
  * Never add a function that looks a brief up by id alone, and never let `userId` come
  * from anywhere but a verified session (see getSession in lib/auth.ts).
  *
- * `userId` is bbdo_users.id from the Azure SQL database — an integer, not a uuid. There
- * is no foreign key; the users table lives in a different database until that migration.
+ * `userId` is bbdo_users.id — an integer, not a uuid. Users now live in this same
+ * database, so briefs.user_id carries a real foreign key to it (see 0004).
  */
 
 export type BriefStatus = 'in_progress' | 'saved' | 'submitted';
@@ -45,36 +45,11 @@ const SUMMARY_COLUMNS = 'id, client_id, tier, title, status, created_at, updated
 
 const TABLE = 'briefs';
 
-// Cached on globalThis so the client survives hot reload and warm serverless instances,
-// mirroring the mssql pool in lib/db.ts. supabase-js is fetch-based, so there is no
-// connection pool to exhaust and no serverExternalPackages entry needed.
-declare global {
-  var _supabaseAdmin: SupabaseClient | undefined;
-}
-
-function getClient(): SupabaseClient {
-  if (globalThis._supabaseAdmin) return globalThis._supabaseAdmin;
-
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      'Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY ' +
-        '(add the Supabase integration via the Vercel Marketplace, then `vercel env pull`).',
-    );
-  }
-
-  const client = createClient(url, key, {
-    // Server-only client: there is no browser session to persist or refresh.
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  });
-  globalThis._supabaseAdmin = client;
-  return client;
-}
+const getClient = getAdminClient;
 
 /** True when the Supabase env vars are present, so callers can degrade instead of throwing. */
 export function isBriefStoreConfigured(): boolean {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return isSupabaseConfigured();
 }
 
 export interface CreateBriefInput {

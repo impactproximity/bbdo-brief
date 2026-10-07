@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { getSession } from '@/lib/auth';
+import { recordUsage } from '@/lib/usage/record';
 
 export async function POST(req: Request) {
     try {
@@ -35,6 +37,20 @@ export async function POST(req: Request) {
         const transcription = await openai.audio.transcriptions.create({
             file: fs.createReadStream(tempFilePath),
             model: 'whisper-1',
+        });
+
+        // Count the invocation without costing it.
+        //
+        // whisper-1 bills per minute of audio and returns no usage object, so there is no
+        // billable quantity in the response. Obtaining one would mean switching this call to
+        // response_format: 'verbose_json' for its `duration` field — a change to a working
+        // route purely for telemetry, which was explicitly ruled out. audio_seconds stays
+        // null, which the report renders as "unpriced" rather than as free.
+        recordUsage({
+            route: 'transcribe',
+            provider: 'openai',
+            model: 'whisper-1',
+            session: await getSession(),
         });
 
         // Cleanup

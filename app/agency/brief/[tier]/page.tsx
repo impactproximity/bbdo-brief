@@ -277,6 +277,7 @@ function AgencyBriefInner({ tier }: { tier: string }) {
             <AgencyReview
               briefType={tier}
               clientId={clientId}
+              briefId={briefId}
               config={config}
               corpus={corpus}
               initialAnswers={answers}

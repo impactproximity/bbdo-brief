@@ -14,6 +14,8 @@ export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 interface AgencyReviewProps {
   briefType: string;
   clientId?: string;
+  /** Forwarded to the question chat for usage attribution only. */
+  briefId?: string | null;
   config: AgencyBriefConfig;
   corpus: string;
   initialAnswers: PrefillResult;
@@ -33,6 +35,7 @@ interface AgencyReviewProps {
 export function AgencyReview({
   briefType,
   clientId,
+  briefId,
   config,
   corpus,
   initialAnswers,
@@ -227,6 +230,7 @@ export function AgencyReview({
           <QuestionChatPanel
             briefType={briefType}
             clientId={clientId}
+            briefId={briefId}
             questionId={currentQuestion.id}
             questionTitle={currentQuestion.title}
             currentAnswer={currentAnswer?.value || ''}
