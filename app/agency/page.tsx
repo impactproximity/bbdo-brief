@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { LogoutButton } from '@/components/LogoutButton';
+import { AgencyToolbar, TOOLBAR_PILL } from '@/components/agency/AgencyToolbar';
 import { getBriefTypesForClient } from '@/lib/questions/agency';
 import { CLIENTS } from '@/lib/clients';
-import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, Repeat, Megaphone, Radio, Ship, History, BarChart3 } from 'lucide-react';
+import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, Repeat, Megaphone, Radio, Ship } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Lightbulb: <Lightbulb className="h-8 w-8" />,
@@ -46,48 +46,8 @@ export default function AgencyDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const client = selectedClient ? CLIENTS.find((c) => c.id === selectedClient) : null;
 
-  // Whether to offer the usage report. This is presentation only — the real gate is
-  // requireAdmin() in /agency/admin and /api/admin/usage, so a non-admin who guesses the URL
-  // still gets nothing. Failing closed (no link) is the right default here.
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setIsAdmin(Boolean(data.isAdmin));
-      } catch {
-        /* no link, no harm */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 md:p-8 lg:p-24" style={{ backgroundColor: '#d9d8d8' }}>
-      <div className="absolute right-3 top-3 md:right-6 md:top-6 z-20 flex items-center gap-2">
-        <Link
-          href="/agency/briefs"
-          className="inline-flex items-center gap-1.5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"
-        >
-          <History className="h-3.5 w-3.5" />
-          My briefs
-        </Link>
-        {isAdmin && (
-          <Link
-            href="/agency/admin"
-            className="inline-flex items-center gap-1.5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"
-          >
-            <BarChart3 className="h-3.5 w-3.5" />
-            Usage
-          </Link>
-        )}
-        <LogoutButton />
-      </div>
       <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mb-6 md:mb-8 z-10">
         <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={315} height={131} priority className="h-[34px] md:h-[52px] w-auto" />
         <div className="flex items-center gap-2 md:gap-3">
@@ -101,15 +61,16 @@ export default function AgencyDashboard() {
 
       <Card className="w-full max-w-5xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border-2 md:border-3 border-slate-300 overflow-hidden rounded-2xl md:rounded-3xl">
         <div className="text-center border-b-2 md:border-b-3 border-slate-300 bg-white pb-4 md:pb-6 pt-6 md:pt-8 px-4 relative">
-          {client && (
-            <button
-              onClick={() => setSelectedClient(null)}
-              className="absolute left-3 md:left-5 top-3 md:top-5 inline-flex items-center gap-1 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              Change client
-            </button>
-          )}
+          <AgencyToolbar
+            left={
+              client && (
+                <button onClick={() => setSelectedClient(null)} title="Change client" className={TOOLBAR_PILL}>
+                  <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">Change client</span>
+                </button>
+              )
+            }
+          />
           <h1 className="text-2xl md:text-4xl font-bold text-slate-800 mb-2 md:mb-3">
             {client ? client.label : 'Choose a client'}
           </h1>

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LogoutButton } from '@/components/LogoutButton';
+import { AgencyToolbar, TOOLBAR_PILL } from '@/components/agency/AgencyToolbar';
 import { ArrowLeft, BarChart3, Loader2, AlertTriangle } from 'lucide-react';
 
 /**
@@ -170,10 +170,6 @@ export function UsageReportView() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center p-4 md:p-8 lg:p-12" style={{ backgroundColor: '#d9d8d8' }}>
-      <div className="absolute right-3 top-3 md:right-6 md:top-6 z-20 flex items-center gap-2">
-        <LogoutButton />
-      </div>
-
       <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mb-6 md:mb-8 z-10">
         <Image src="/impact-bbdo-logo.png" alt="IMPACT BBDO" width={315} height={131} priority className="h-[34px] md:h-[52px] w-auto" />
         <div className="flex items-center gap-2 md:gap-3">
@@ -187,16 +183,16 @@ export function UsageReportView() {
 
       <Card className="w-full max-w-7xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border-2 md:border-3 border-slate-300 overflow-hidden rounded-2xl md:rounded-3xl">
         <div className="text-center border-b-2 md:border-b-3 border-slate-300 bg-white pb-4 md:pb-6 pt-6 md:pt-8 px-4 relative">
-          <Link href="/agency">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute left-3 md:left-5 top-3 md:top-5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm"
-            >
-              <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
-              Back
-            </Button>
-          </Link>
+          {/* No "Usage" — this IS that page. */}
+          <AgencyToolbar
+            showUsage={false}
+            left={
+              <Link href="/agency" title="Back" className={TOOLBAR_PILL}>
+                <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Back</span>
+              </Link>
+            }
+          />
           <h1 className="text-2xl md:text-4xl font-bold text-slate-800 mb-2 md:mb-3">Platform usage</h1>
           <p className="text-sm md:text-lg text-slate-600 max-w-2xl mx-auto font-medium">
             Who is using the Brief Creator, how many briefs they have created, and what the AI spend is.
