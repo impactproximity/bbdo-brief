@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getSession } from '@/lib/auth';
+import { openAiUsage, recordUsage } from '@/lib/usage/record';
 
 export async function POST(req: Request) {
     try {
@@ -107,6 +109,15 @@ Question Context: ${questionTitle}`;
             ],
             temperature: 0.3,
             max_tokens: 200,
+        });
+
+        // Meter the call — after the mock short-circuit above. No client/tier dimension:
+        // this route only ever receives a question title and the user's text.
+        recordUsage({
+            route: 'chat',
+            provider: 'openai',
+            session: await getSession(),
+            ...openAiUsage(response),
         });
 
         const enhancedResponse = response.choices[0].message.content || userResponse;

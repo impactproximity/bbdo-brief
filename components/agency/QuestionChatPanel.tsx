@@ -14,6 +14,8 @@ interface ChatMessage {
 interface QuestionChatPanelProps {
   briefType: string;
   clientId?: string;
+  /** Passed through to the API for usage attribution only; null before the row exists. */
+  briefId?: string | null;
   questionId: string;
   questionTitle: string;
   currentAnswer: string;
@@ -25,6 +27,7 @@ interface QuestionChatPanelProps {
 export function QuestionChatPanel({
   briefType,
   clientId,
+  briefId,
   questionId,
   questionTitle,
   currentAnswer,
@@ -62,6 +65,7 @@ export function QuestionChatPanel({
           corpus,
           history: messages,
           userMessage: text,
+          briefId,
         }),
       });
 

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAgencyBriefConfig } from '@/lib/questions/agency';
 import { getClientConfig, buildClientContextBlock } from '@/lib/clients';
+import { getSession } from '@/lib/auth';
+import { anthropicUsage, recordUsage } from '@/lib/usage/record';
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_OUTPUT_TOKENS = 2048;
@@ -21,6 +23,7 @@ export async function POST(req: Request) {
       corpus,
       history,
       userMessage,
+      briefId,
     } = (await req.json()) as {
       briefType: string;
       clientId?: string;
@@ -29,6 +32,9 @@ export async function POST(req: Request) {
       corpus: string;
       history: HistoryMessage[];
       userMessage: string;
+      // Optional, and used only for usage attribution. Unlike prefill, the brief row does
+      // exist by the time anyone opens a question chat, so this spend can be tied to it.
+      briefId?: string | null;
     };
 
     const config = getAgencyBriefConfig(briefType);
@@ -118,6 +124,17 @@ Interaction rules:
         },
       ],
       messages,
+    });
+
+    // Meter the call — after the mock short-circuit, so a keyless run records nothing.
+    recordUsage({
+      route: 'agency/chat',
+      provider: 'anthropic',
+      session: await getSession(),
+      clientId: clientId ?? null,
+      tier: briefType ?? null,
+      briefId: briefId ?? null,
+      ...anthropicUsage(response),
     });
 
     let message = '';

@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // mssql/tedious use dynamic requires; keep them external to the server bundle.
-  serverExternalPackages: ["mssql", "tedious"],
   experimental: {
     // proxy.ts runs on /api/*, so Next buffers each request body to allow a
     // second read in the route handler. The 10 MB default silently truncates

@@ -1,16 +1,16 @@
 -- Brief history for the agency flow (Supabase / Postgres).
 -- Run once in the Supabase SQL editor.
 --
--- NOTE: this is a SEPARATE database from db/schema.sql, which is Microsoft SQL Server
--- and holds bbdo_users. Users have not been migrated yet, so user_id below is the
--- SQL Server bbdo_users.id (an INT IDENTITY) carried in our own session JWT. There is
--- deliberately NO foreign key — the referenced table lives in another database.
+-- user_id is bbdo_users.id, carried in our own session JWT. Users originally lived in a
+-- separate SQL Server database, which is why this is an integer rather than a uuid and
+-- why there was no foreign key. They were migrated into this database (see 0003), and
+-- 0004 adds the foreign key that was impossible before.
 
 create table if not exists briefs (
   id               uuid        primary key default gen_random_uuid(),
 
-  -- Identity. user_id is bbdo_users.id from the Azure SQL database (integer, not a uuid).
-  -- user_email is a snapshot so briefs can be re-linked when users move to Supabase Auth.
+  -- Identity. user_id references bbdo_users.id (integer, not a uuid) — see 0004 for the
+  -- foreign key. user_email is a snapshot, kept as a re-linking escape hatch.
   user_id          integer     not null,
   user_email       text        not null,
 

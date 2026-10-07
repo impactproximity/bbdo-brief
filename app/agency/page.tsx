@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { LogoutButton } from '@/components/LogoutButton';
 import { getBriefTypesForClient } from '@/lib/questions/agency';
 import { CLIENTS } from '@/lib/clients';
-import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, KeyRound, Repeat, Megaphone, Radio, Ship, History } from 'lucide-react';
+import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, Repeat, Megaphone, Radio, Ship, History, BarChart3 } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Lightbulb: <Lightbulb className="h-8 w-8" />,
@@ -46,6 +46,27 @@ export default function AgencyDashboard() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const client = selectedClient ? CLIENTS.find((c) => c.id === selectedClient) : null;
 
+  // Whether to offer the usage report. This is presentation only — the real gate is
+  // requireAdmin() in /agency/admin and /api/admin/usage, so a non-admin who guesses the URL
+  // still gets nothing. Failing closed (no link) is the right default here.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setIsAdmin(Boolean(data.isAdmin));
+      } catch {
+        /* no link, no harm */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 md:p-8 lg:p-24" style={{ backgroundColor: '#d9d8d8' }}>
       <div className="absolute right-3 top-3 md:right-6 md:top-6 z-20 flex items-center gap-2">
@@ -56,13 +77,15 @@ export default function AgencyDashboard() {
           <History className="h-3.5 w-3.5" />
           My briefs
         </Link>
-        <Link
-          href="/change-password"
-          className="inline-flex items-center gap-1.5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"
-        >
-          <KeyRound className="h-3.5 w-3.5" />
-          Change password
-        </Link>
+        {isAdmin && (
+          <Link
+            href="/agency/admin"
+            className="inline-flex items-center gap-1.5 rounded-full border-2 border-slate-300 hover:border-slate-500 hover:bg-slate-100 text-xs md:text-sm font-medium text-slate-700 px-3 py-1.5 transition-colors"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Usage
+          </Link>
+        )}
         <LogoutButton />
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 mb-6 md:mb-8 z-10">
