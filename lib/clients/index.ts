@@ -4,6 +4,8 @@ import { sadiaConfig } from './sadia';
 import { internalImpactConfig } from './internal-impact-bbdo';
 import { socialImpactConfig } from './social-impact-bbdo';
 import { pandoConfig } from './p-and-o';
+import { googleGeminiConfig } from './google-gemini';
+import { mcvitiesConfig } from './mcvities';
 
 export type { ClientConfig } from './types';
 
@@ -13,6 +15,8 @@ const clients: Record<string, ClientConfig> = {
   'internal-impact-bbdo': internalImpactConfig,
   'social-impact-bbdo': socialImpactConfig,
   'p-and-o': pandoConfig,
+  'google-gemini': googleGeminiConfig,
+  mcvities: mcvitiesConfig,
 };
 
 // For the dashboard cards (parallels AGENCY_BRIEF_TYPES).

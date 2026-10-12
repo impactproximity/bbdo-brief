@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AgencyToolbar, TOOLBAR_PILL } from '@/components/agency/AgencyToolbar';
 import { getBriefTypesForClient } from '@/lib/questions/agency';
 import { CLIENTS } from '@/lib/clients';
-import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, Repeat, Megaphone, Radio, Ship } from 'lucide-react';
+import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, Repeat, Megaphone, Radio, Ship, Sparkles, Cookie } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
   Lightbulb: <Lightbulb className="h-8 w-8" />,
@@ -21,6 +21,8 @@ const iconMap: Record<string, React.ReactNode> = {
   Megaphone: <Megaphone className="h-8 w-8" />,
   Radio: <Radio className="h-8 w-8" />,
   Ship: <Ship className="h-8 w-8" />,
+  Sparkles: <Sparkles className="h-8 w-8" />,
+  Cookie: <Cookie className="h-8 w-8" />,
 };
 
 const colorMap: Record<string, { bg: string; border: string; icon: string; hover: string }> = {
@@ -30,6 +32,8 @@ const colorMap: Record<string, { bg: string; border: string; icon: string; hover
   teal: { bg: 'bg-teal-50', border: 'border-teal-200 hover:border-teal-400', icon: 'text-teal-600 bg-teal-100', hover: 'hover:shadow-teal-200/50' },
   yellow: { bg: 'bg-yellow-50', border: 'border-yellow-200 hover:border-yellow-400', icon: 'text-yellow-600 bg-yellow-100', hover: 'hover:shadow-yellow-200/50' },
   red: { bg: 'bg-red-50', border: 'border-red-200 hover:border-red-400', icon: 'text-red-600 bg-red-100', hover: 'hover:shadow-red-200/50' },
+  blue: { bg: 'bg-blue-50', border: 'border-blue-200 hover:border-blue-400', icon: 'text-blue-600 bg-blue-100', hover: 'hover:shadow-blue-200/50' },
+  navy: { bg: 'bg-blue-50', border: 'border-blue-300 hover:border-blue-500', icon: 'text-blue-800 bg-blue-100', hover: 'hover:shadow-blue-300/50' },
 };
 
 // Brand accent used only on the client picker cards (top bar + hover glow/text).
@@ -40,6 +44,10 @@ const accentMap: Record<string, { bar: string; glow: string; text: string }> = {
   teal: { bar: 'from-teal-400 to-teal-600', glow: 'hover:shadow-teal-200/60', text: 'group-hover:text-teal-600' },
   yellow: { bar: 'from-yellow-300 to-yellow-500', glow: 'hover:shadow-yellow-200/60', text: 'group-hover:text-yellow-600' },
   red: { bar: 'from-red-400 to-red-600', glow: 'hover:shadow-red-200/60', text: 'group-hover:text-red-600' },
+  // Google Gemini — the blue-to-violet gradient of the Gemini mark.
+  blue: { bar: 'from-blue-400 to-indigo-500', glow: 'hover:shadow-blue-200/60', text: 'group-hover:text-blue-600' },
+  // McVitie's Blue, PANTONE 2748 C / RGB 0-23-119 — deliberately deeper than 'blue' above.
+  navy: { bar: 'from-blue-700 to-blue-900', glow: 'hover:shadow-blue-300/60', text: 'group-hover:text-blue-800' },
 };
 
 export default function AgencyDashboard() {
