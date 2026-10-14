@@ -21,7 +21,7 @@ import type { SessionPayload } from '@/lib/session';
  * SERVER ONLY — goes through the service-role client.
  */
 
-export type UsageRoute = 'agency/prefill' | 'agency/chat' | 'chat' | 'transcribe';
+export type UsageRoute = 'agency/prefill' | 'agency/chat' | 'chat' | 'transcribe' | 'api/v1/briefs';
 export type UsageProvider = 'anthropic' | 'openai';
 
 export interface RecordUsageInput {
@@ -41,6 +41,15 @@ export interface RecordUsageInput {
   clientId?: string | null;
   tier?: string | null;
   briefId?: string | null;
+
+  /**
+   * Machine callers (/api/v1) have no session. These two keep their spend attributable:
+   * `apiKeyId` is the precise link, and `actorLabel` fills `user_email` so the admin
+   * report — which groups by user_id, falling back to the email string — shows the
+   * integration by name instead of lumping it into "unattributed".
+   */
+  apiKeyId?: string | null;
+  actorLabel?: string | null;
 
   inputTokens?: number;
   outputTokens?: number;
@@ -69,8 +78,13 @@ export function recordUsage(input: RecordUsageInput): void {
 
       const { error } = await getAdminClient().from('usage_events').insert({
         user_id: input.session?.userId ?? null,
-        user_email: input.session?.email ?? null,
+        user_email: input.session?.email ?? input.actorLabel ?? null,
         brief_id: input.briefId ?? null,
+        // Spread, not a plain `?? null`, so the column name never appears in an insert
+        // from the human UI path. 0006 adds it; until that migration is applied, naming
+        // it here would make EVERY usage insert fail — and because this function swallows
+        // errors by design, cost tracking would stop silently rather than loudly.
+        ...(input.apiKeyId ? { api_key_id: input.apiKeyId } : {}),
         route: input.route,
         provider: input.provider,
         model: input.model,
