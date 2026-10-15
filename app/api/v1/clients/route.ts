@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CLIENTS } from '@/lib/clients';
+import { acceptedNamesFor } from '@/lib/clients/resolve';
 import { getBriefTypesForClient } from '@/lib/questions/agency';
 import { requireApiKey } from '@/lib/api/auth';
 import { withApiErrorHandling } from '@/lib/api/errors';
@@ -28,6 +29,8 @@ export async function GET(req: Request) {
         clientId: c.id,
         label: c.label,
         description: c.description,
+        // Every spelling this API accepts as `clientId` for this brand.
+        aliases: acceptedNamesFor(c.id),
         briefTypes: tiers.map((t) => ({ id: t.id, label: t.label, description: t.description })),
       };
     });

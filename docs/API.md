@@ -52,10 +52,48 @@ Content-Type: application/json
 }
 ```
 
-At least one of `prompt`, `documents` or `voiceTranscript` must be present.
+At least one of `prompt`, `idea`, `documents` or `voiceTranscript` must be present.
 
 Documents are either `contentBase64` (PDF, DOCX, XLSX or CSV, max 15 MB each — parsed with
 the same code the web uploader uses) or `text` if you have already extracted it.
+
+**`clientId` accepts names, not just slugs.** `"mcvities"`, `"McVitie's"`, `"P&O"` and
+`"Starbucks"` all resolve. Matching is case- and punctuation-insensitive but otherwise
+exact, so a typo fails with a `404` rather than silently briefing the wrong brand. The
+accepted spellings for each client are listed as `aliases` in `/catalog`.
+
+### Generating a brief from a trend Idea
+
+If your platform surfaces trend-led ideas, send the structured object instead of flattening
+it into a prompt — the wording the model sees is then maintained here, and improves for every
+consumer at once.
+
+```jsonc
+{
+  "clientId": "Starbucks",                 // your own brand name is fine
+  "externalId": "pulse-idea-296df174",
+  "idea": {
+    "title":        "Our Stop On The Coffee Crawl",
+    "trendSummary": "Al Wahda Mall ran an International Coffee Day 'coffee crawl'…",
+    "whyRelevant":  "We're already a named stop on these UAE crawls…",
+    "opportunity":  "Lean into being the stop where the crawl slows down…",
+    "scale":        "social_play",         // implies briefType — see ideaScaleMap
+    "region":       "AE",
+    "sourceTrends": [{ "name": "Al Wahda Mall", "channel": "instagram",
+                       "region": "AE", "exampleUrl": "https://instagram.com/p/…" }]
+  }
+}
+```
+
+`idea.title` is required, plus at least one of `trendSummary`, `whyRelevant` or
+`opportunity`.
+
+**`briefType` becomes optional when `idea.scale` is present** — it is derived via
+`ideaScaleMap` from `/catalog` (`social_play` → `social`, `bigger_territory` → `big-idea`).
+An explicit `briefType` always wins. An unrecognised scale with no `briefType` returns `422`.
+
+`idea` and `prompt` can be sent together; the composed Idea text comes first. `documents`
+work alongside either.
 
 **Response `200`**
 
@@ -84,10 +122,39 @@ the same code the web uploader uses) or `text` if you have already extracted it.
 
 `answers` is keyed by question id. Call `GET /brief-types/{tier}` to know the keys in advance.
 
+### `GET /catalog`
+
+Everything you need to build a picker, in **one call**: every client this key may use, its
+brief types, and the full question schema for each. New clients appear automatically as they
+are onboarded.
+
+```jsonc
+{
+  "clients": [{
+    "clientId": "mcvities",
+    "label": "McVitie's",
+    "aliases": ["mcvities", "McVitie's"],   // any of these work as clientId
+    "briefTypes": [{
+      "id": "big-idea", "label": "Big Idea Brief", "documentTitle": "Big Idea Brief",
+      "questions": [{ "id": "brief_name", "title": "Project Name",
+                      "prompt": "…", "hint": null, "required": true }]
+    }]
+  }],
+  "ideaScaleMap": { "social_play": "social", "bigger_territory": "big-idea" },
+  "answerShape": { "value": "string", "confidence": "high | medium | low",
+                   "missing": "boolean", "suggestion": "string (optional)" }
+}
+```
+
+Roughly 100 KB for 7 clients. It changes rarely — cache it.
+
+**If a brand is not in this list, this API cannot brief for it.** Hide or disable your
+"create brief" action for those rather than letting the call fail.
+
 ### `GET /clients`
 
-The clients this key may use, each with its available brief types. New clients appear here
-automatically as they are onboarded.
+The same client and brief-type list without question schemas. Use `/catalog` if you want the
+questions too.
 
 ### `GET /brief-types/{tier}`
 

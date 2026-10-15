@@ -5,6 +5,8 @@ import { anthropicUsage, recordUsage } from '@/lib/usage/record';
 import { requireApiKey, assertClientAndTierAllowed, stampKeyUsed } from '@/lib/api/auth';
 import { checkApiRateLimit, recordApiRequest } from '@/lib/api/rate-limit';
 import { buildCorpusFromDocuments } from '@/lib/api/documents';
+import { resolveClientId } from '@/lib/clients/resolve';
+import { composeIdeaPrompt, parseIdea, IDEA_SCALE_TO_BRIEF_TYPE } from '@/lib/api/idea-prompt';
 import { createApiBrief, findByIdempotencyKey } from '@/lib/api/briefs-store';
 import { ApiFailure, apiError, withApiErrorHandling } from '@/lib/api/errors';
 
@@ -24,6 +26,7 @@ interface BriefRequestBody {
   voiceTranscript?: unknown;
   documents?: unknown;
   externalId?: unknown;
+  idea?: unknown;
 }
 
 function requiredString(value: unknown, field: string): string {
@@ -63,8 +66,32 @@ export async function POST(req: Request) {
       throw new ApiFailure('invalid_request', 'Request body must be valid JSON.');
     }
 
-    const clientId = requiredString(body.clientId, 'clientId');
-    const briefType = requiredString(body.briefType, 'briefType');
+    // Consumers identify brands by their own display names ("McVitie's", "P&O"), so accept
+    // those as well as our slugs. Everything downstream — scope check, persistence,
+    // metering — uses the resolved canonical id, so the data has one spelling per client.
+    const requestedClient = requiredString(body.clientId, 'clientId');
+    const clientId = resolveClientId(requestedClient);
+    if (!clientId) {
+      throw new ApiFailure(
+        'not_found',
+        `Unknown client: "${requestedClient}". Call GET /api/v1/catalog for the clients this key may use and the names it accepts.`,
+      );
+    }
+
+    // An Idea carries its own scale, which implies the tier — so a trend-led consumer can
+    // post the Idea alone. An explicit briefType always wins.
+    const idea = body.idea === undefined || body.idea === null ? null : parseIdea(body.idea);
+    const explicitBriefType = body.briefType === undefined || body.briefType === null ? '' : requiredString(body.briefType, 'briefType');
+    const briefType = explicitBriefType || (idea?.scale ? IDEA_SCALE_TO_BRIEF_TYPE[idea.scale] ?? '' : '');
+
+    if (!briefType) {
+      throw new ApiFailure(
+        'validation_failed',
+        idea
+          ? `"briefType" is required: idea.scale ${idea.scale ? `"${idea.scale}" is not a recognised scale` : 'was not supplied'}. See ideaScaleMap in GET /api/v1/catalog.`
+          : '"briefType" is required and must be a non-empty string.',
+      );
+    }
 
     // 404 for unknown, 403 for out-of-scope — see assertClientAndTierAllowed.
     assertClientAndTierAllowed(key, clientId, briefType);
@@ -104,14 +131,16 @@ export async function POST(req: Request) {
       throw new ApiFailure('internal_error', 'Brief generation is not configured on this deployment.');
     }
 
-    // `prompt` is the friendly name for what the UI calls textNotes; accept either.
-    const textNotes = optionalString(body.prompt, 'prompt') || optionalString(body.textNotes, 'textNotes');
+    // `prompt` is the friendly name for what the UI calls textNotes; accept either. An
+    // Idea composes into the same field, ahead of any free text the caller also sent.
+    const freeText = optionalString(body.prompt, 'prompt') || optionalString(body.textNotes, 'textNotes');
+    const textNotes = [idea ? composeIdeaPrompt(idea) : '', freeText].filter((s) => s.trim()).join('\n\n');
     const voiceTranscript = optionalString(body.voiceTranscript, 'voiceTranscript');
     const externalId = body.externalId === undefined || body.externalId === null ? null : requiredString(body.externalId, 'externalId');
     const corpus = await buildCorpusFromDocuments(body.documents);
 
     if (!corpus.trim() && !textNotes.trim() && !voiceTranscript.trim()) {
-      throw new ApiFailure('validation_failed', 'Provide at least one of "prompt", "documents" or "voiceTranscript".');
+      throw new ApiFailure('validation_failed', 'Provide at least one of "prompt", "idea", "documents" or "voiceTranscript".');
     }
 
     recordApiRequest(key.id, ROUTE);

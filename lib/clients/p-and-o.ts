@@ -100,6 +100,11 @@ export const pandoConfig: ClientConfig = {
   icon: 'Ship',
   color: 'orange',
 
+  // Impact BBDO Pulse lists this brand as "P&O". Normalising our label gives "poferries",
+  // which does not match "po", so the foreign spelling is declared explicitly — see the
+  // note on ClientConfig.aliases for why the matcher is not loosened instead.
+  aliases: ['P&O'],
+
   // Corporate P&O master logo (flag + wordmark + DP World endorsement), supplied as .webp
   // and converted — it must stay .png, since the DOCX ImageRun labels every non-jpg as png
   // and a .webp corrupts the header. Transparent background, trimmed to the artwork.
