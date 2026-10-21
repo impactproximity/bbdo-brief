@@ -112,6 +112,12 @@ export async function POST(req: Request) {
           documentTitle: config.documentTitle,
           title: existing.title,
           externalId: existing.external_id,
+          // Same field set as a fresh response, so a consumer that timed out and retried
+          // never sees a key it had on the first attempt disappear. `model` is the one
+          // exception: it belongs to the model call, which a replay does not make, and it
+          // is not persisted — hence null rather than a stale or invented value.
+          model: null,
+          questions: config.questions.map((q) => ({ id: q.id, title: q.title, required: Boolean(q.required) })),
           answers: existing.answers,
           createdAt: existing.created_at,
           idempotentReplay: true,
