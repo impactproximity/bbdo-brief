@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL, resolveFileKind } from '@/lib/uploads/supported-files';
-import { parseCsv, parseXlsx } from '@/lib/uploads/spreadsheet';
+import { extractText } from '@/lib/uploads/extract-text';
 
 // Multipart framing (boundaries, part headers) adds a little on top of the file itself.
 const MULTIPART_OVERHEAD_ALLOWANCE = 1024 * 1024;
@@ -32,31 +32,10 @@ export async function POST(req: Request) {
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        let text = '';
 
-        switch (resolved.kind) {
-            case 'pdf': {
-                // eslint-disable-next-line @typescript-eslint/no-require-imports
-                const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
-                const result = await pdfParse(buffer);
-                text = result.text;
-                break;
-            }
-            case 'docx': {
-                const mammoth = await import('mammoth');
-                const result = await mammoth.extractRawText({ buffer });
-                text = result.value;
-                break;
-            }
-            case 'xlsx': {
-                text = await parseXlsx(buffer);
-                break;
-            }
-            case 'csv': {
-                text = parseCsv(buffer.toString('utf8'));
-                break;
-            }
-        }
+        // Parsing lives in lib/uploads/extract-text.ts, shared with the public API so both
+        // entry points produce identical corpus text from the same file.
+        const text = await extractText(buffer, resolved.kind);
 
         return NextResponse.json({ text });
     } catch (error) {

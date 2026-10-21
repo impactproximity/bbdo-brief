@@ -14,6 +14,19 @@ export interface ClientConfig {
    */
   briefTypes?: string[];
 
+  /**
+   * Extra names the public API will accept for this client, beyond the id and the label.
+   *
+   * Consuming platforms identify brands by their own display names — Impact BBDO Pulse
+   * sends "P&O", not "p-and-o". Normalising id and label covers most of them (e.g.
+   * "McVitie's" reduces to "mcvities", which is already the id), but not where the other
+   * platform's name is a strict subset of ours. Add the exact foreign spelling here rather
+   * than loosening the matcher to prefixes, which would make "P" resolve to P&O Ferries.
+   *
+   * Matching is case- and punctuation-insensitive, so one entry covers "P&O", "p&o" and "P & O".
+   */
+  aliases?: string[];
+
   // --- Branding asset for the .docx header (and optionally the dashboard card) ---
   logo?: string; // path under public/, e.g. 'clients/starbucks.png'. When absent, header falls back to a name TextRun.
   logoWidth?: number; // optional ImageRun width  (default ~100)

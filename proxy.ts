@@ -8,7 +8,13 @@ const PUBLIC_PAGES = ['/login'];
 const OPEN_PAGES: string[] = [];
 
 // Next internals, static assets, auth endpoints and metadata icons are never gated.
-const ALWAYS_ALLOW = /^\/(?:_next\/|favicon\.ico$|icon$|.*\/icon\.ico$|api\/auth\/)/;
+//
+// `api/v1/` is the public machine API. It is exempt from the SESSION gate only — it is not
+// unauthenticated. Its callers hold an API key, which has to be verified against the
+// database, and this file runs on the edge with no database access (see lib/session). So
+// the check lives in-route in Node (lib/api/auth.ts requireApiKey), exactly as the admin
+// role check does for the same reason.
+const ALWAYS_ALLOW = /^\/(?:_next\/|favicon\.ico$|icon$|.*\/icon\.ico$|api\/auth\/|api\/v1\/)/;
 const STATIC_FILE = /\.(?:js|css|map|json|txt|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$/;
 
 export async function proxy(req: NextRequest) {
