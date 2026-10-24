@@ -4,9 +4,9 @@ Running record of what has been built, what state it is in, and what is still op
 Written as a handover: anyone (or any new session) should be able to read this and know
 where things stand without re-reading the code.
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-24
 **Live at:** https://bbdo.briefomnicom.com
-**Repo:** `impactproximity/BBDO_Brief_Creator` · **Deploy:** Vercel, auto-deploys on merge to `main`
+**Repo:** `impactproximity/bbdo-brief` · **Deploy:** Vercel, auto-deploys on merge to `main`
 
 ---
 
@@ -14,15 +14,17 @@ where things stand without re-reading the code.
 
 | | |
 |---|---|
-| Branch | `feat/brief-history` (HEAD `d5c978c`, already contained in `origin/main`) |
-| Uncommitted | **48 files** — OTP login migration, usage reporting, login message, bulk import. Not pushed. |
-| Last merged PR | **#12** — brief history to Supabase (merged 2026-10-05, live) |
+| Branch | `feat/public-brief-api` (HEAD `546ee08`) — merged to `main` as `0938745` |
+| Uncommitted | None tracked. ~13 **untracked** password-era leftovers on disk — see Gotchas below. |
+| Last merged PR | **#17** — public Brief Generation API (merged 2026-10-21, live) |
 | Dev server | Run `npm run dev` → http://localhost:3000 |
-| Databases | **One** — Supabase Postgres. SQL Server dependency removed. Migrations 0001–**0005** applied. |
+| Databases | **One** — Supabase Postgres. SQL Server dependency removed. Migrations 0001–**0006** applied. |
+| Users | **82** rows in `bbdo_users` |
+| API keys | 1 active (`bbdo_sk_MP98…`, Impact BBDO Pulse, 20/hour), 2 revoked |
 
 **Standing instruction from the user: never push, open a PR, or deploy without asking first
 and getting a clear yes in the current conversation.** Merging a PR to `main` auto-deploys to
-production for ~25 staff, so pushing is not a low-stakes action here. Local commits, builds,
+production for ~82 staff, so pushing is not a low-stakes action here. Local commits, builds,
 dev server and migrations are fine.
 
 ---
@@ -63,7 +65,7 @@ key reaches nothing. All access goes through the service-role key from our own r
 
 ---
 
-## Completed but UNCOMMITTED — the OTP login migration
+## Completed and in production — the OTP login migration (PR #13)
 
 **Working locally, never pushed** — roughly 33 of the 47 uncommitted files. Password login is gone;
 users are pre-registered, marked active, and receive only a 6-digit code by email.
@@ -203,7 +205,7 @@ matched. Verify empirically, not by reasoning about the code.
 
 ---
 
-## Completed but UNCOMMITTED — usage & cost reporting
+## Completed and in production — usage & cost reporting (PR #13)
 Answers "who is using the platform, how many briefs each person made, what it costs".
 Migration **0005 is already applied to the production database** (purely additive, so the
 live app was unaffected).
@@ -334,10 +336,170 @@ appears consistently everywhere. Pages omit their own link via `showBriefs` / `s
 Still presentational only — `requireAdmin()` remains the real gate. Re-verified after the
 move: a non-admin sees only "My briefs" and "Log out", and `/agency/admin` still blocks them.
 
+## Public Brief Generation API — PR #17, merged 2026-10-21
+
+Machine-to-machine access so another platform (**Impact BBDO Pulse**, the Trend Application)
+can generate briefs with an API key instead of a human session. Contract: `docs/API.md`.
+Published integration guide for the consuming team:
+https://claude.ai/code/artifact/f6508277-032f-438f-8aed-dad8232f9c50
+
+### Shape — a second auth scheme that shares nothing but the generation core
+
+- `proxy.ts` exempts `api/v1/` from the **session** gate only. The key is verified in-route in
+  Node (`lib/api/auth.ts` `requireApiKey`), because the proxy runs on the edge with no database
+  — the same division the admin role check already uses. The regex is anchored, so it can only
+  ever exempt `/api/v1/*`.
+- Keys are SHA-256 hashed. Plaintext is shown **once** at creation and never stored; a lost key
+  is revoked and replaced, never recovered. `key_prefix` (first 12 chars) is deliberately
+  loggable and **not** sufficient to authenticate.
+- API briefs go to a **new `api_briefs` table, never `briefs`** — so no user's history in
+  `/agency/briefs` is touched and the `store.ts` "every function takes `userId` first" invariant
+  is untouched.
+- `api_requests` is its own rate-limit ledger, separate from `otp_attempts`, so machine traffic
+  cannot throttle real people out of signing in.
+- `usage_events.api_key_id` (nullable, added by 0006) attributes API spend. `user_email` is
+  filled with `api:<key name>` so the admin report shows the integration by name rather than
+  lumping it into "unattributed".
+
+### Endpoints
+
+`POST /briefs` (synchronous, `maxDuration = 300`) · `GET /catalog` · `GET /clients` ·
+`GET /brief-types/{tier}` · `GET /me`. All `runtime = 'nodejs'`.
+
+### The only two changes to existing code — both verbatim extractions
+
+Done so the human UI and the API cannot drift into producing different briefs from the same
+inputs:
+
+- `app/api/agency/prefill/route.ts` → prompt assembly and the model call moved to
+  **`lib/briefs/generate.ts`**. Verified byte-identical: same model, `max_tokens`, the same three
+  system blocks with identical `cache_control` placement, same operational-rules text, same tool
+  schema, same `tool_choice`, same corpus template.
+- `app/api/parse-document/route.ts` → the parser switch moved to
+  **`lib/uploads/extract-text.ts`**. Same four parsers, same order.
+
+If you change a prompt string in `generate.ts` you change it for **both** surfaces. That is the point.
+
+### Migration 0006
+
+`db/supabase/0006_api_access.sql` — three new tables (`api_keys`, `api_briefs`, `api_requests`),
+each with RLS enabled and **zero policies**, plus the nullable `usage_events.api_key_id` and five
+indexes. Applied to live 2026-10-21 and verified against `pg_class`.
+
+### Verified end to end (2026-10-21)
+
+Local dev against the live database, then production after merge:
+
+- Read-only endpoints 200 with correct scopes; four auth rejections all 401; unknown tier 404.
+- One real generation: 200 in 84s, 15 questions answered, $0.069.
+- `"P&O"` resolved to `p-and-o` — first real exercise of `lib/clients/resolve.ts`.
+- Idempotent replay: same `briefId`, 0.59s vs 84s, no second model call, quota not consumed.
+- Isolation: brief landed in `api_briefs`; `briefs` unchanged at 14 rows.
+- Session gating unchanged: human pages still 307 to `/login`, gated APIs 401, and **an API key
+  does not unlock `/api/admin/usage`**.
+- Revocation effective on the very next request.
+
+### `answers` key order is NOT stable — commit `546ee08`
+
+Found by actually running a replay. `api_briefs.answers` is `jsonb`, which does not preserve
+object key order, so a **replayed** brief comes back with its questions re-sorted (`confidence`
+and `missing` swap places too). Content is identical — `deepStrictEqual` passes — only order
+differs.
+
+`546ee08` therefore makes a replay return the same field set as a fresh response, including the
+**`questions` array, which is the only authoritative record of sequence**. Consumers must iterate
+`questions[]` and look up `answers[id]`, never walk `answers` directly. A renderer that gets this
+wrong looks correct on first generation and scrambles on retry — the nastiest kind of bug to
+diagnose. `model` comes back `null` on a replay because no model call was made.
+
+---
+
+## Running migrations without the Supabase SQL editor — new capability, 2026-10-21
+
+Supabase project ref **`oqpcdkkofjkxzilhpxvc`**. `SUPABASE_ACCESS_TOKEN` now lives in
+`.env.local` — a **scoped** personal access token: that one project only, `Database → Full
+Access`, everything else `No Access`. Migrations can be applied directly:
+
+```
+POST https://api.supabase.com/v1/projects/oqpcdkkofjkxzilhpxvc/database/query
+Authorization: Bearer $SUPABASE_ACCESS_TOKEN
+{"query": "<sql>"}
+```
+
+`Read Access` is **not** enough — that endpoint is a write endpoint even for a `select`. Scoped
+tokens cannot be edited after creation; changing scope means delete and recreate. The token still
+permits **any** SQL on this database, including `drop table` — it is not a sandbox.
+
+**What does not work, so do not retry it:** `psql` is not installed; `pg`/`postgres` are not in
+`node_modules`; `DATABASE_URL` is the dead SQL Server string; the service-role key only reaches
+PostgREST, which cannot do DDL; and the installed `supabase` CLI is logged into a different
+account that cannot see this project.
+
+**Verify schema with `pg_class`, never PostgREST.** `supabase-js`
+`.select("*", {count:"exact", head:true})` returns `count: null` with a **null error** for a table
+that does not exist — so it silently reports missing tables as present. This produced a false
+"migration partially applied" diagnosis before `pg_class` showed the truth: nothing had been
+applied at all.
+
+---
+
+## API keys and the Pulse consumer
+
+### Ledger as of 2026-10-24
+
+| Name | Prefix | State | Rate | Note |
+|---|---|---|---|---|
+| Local verification | `bbdo_sk_Ds0p` | revoked | 60/h | throwaway, used for first verification |
+| Impact BBDO Pulse | `bbdo_sk_qIpZ` | revoked | 20/h | rotated out after local testing, 2026-10-22 |
+| Impact BBDO Pulse | `bbdo_sk_MP98` | **active** | 20/h | all clients, all tiers. In use since 2026-10-22 |
+
+Scope and rate are plain columns — both can be changed with SQL **without** reissuing the key.
+Only the secret itself is unrecoverable. 20/hour was chosen as a spend cap, not a throttle: a
+brief takes minutes to generate, so realistic throughput is far below it.
+
+### The consumer lives in a different repo
+
+`BBDO_Trend_Application/bbdo-trends-platform` — note the **nested** directory; running scripts
+from `BBDO_Trend_Application/` itself fails with `MODULE_NOT_FOUND`.
+
+- `scripts/set-brief-key.mjs` stores the key **pgcrypto-encrypted** in `scraper_credentials`
+  under key `brief_api_key`, then proves it with a free `GET /me`. Prompts with terminal echo
+  off; never accepts the key as an argument (shell history, process table).
+- `apps/web/lib/briefApi.js` and `apps/web/lib/briefClientResolution.js` are the client side.
+- **Gotcha:** that script **hardcodes** `EXPECTED_PREFIX` at line 50. Every rotation therefore
+  needs that one line updated to the new prefix, or it refuses the new key. `EXPECTED_LENGTH = 51`
+  never changes (8 chars of prefix + 43 of base64url).
+
+---
+
+## Gotchas found 2026-10-21 (local only — none affect production)
+
+- **~13 untracked password-era files sit on disk**: `app/api/auth/{login,signup,change-password}`,
+  `app/signup`, `app/change-password`, `lib/db.ts`, `db/schema.sql`, old `scripts/db-*.mjs`. Deleted
+  from git when OTP replaced passwords, then restored locally by OneDrive. They break
+  `npm run build` and `tsc --noEmit` **locally** while being invisible to Vercel, which builds from
+  git. A local build failure in these files is not a real breakage — confirmed by building a clean
+  `git worktree`, which produced no `/signup` or `/api/auth/login` routes.
+- **`.next` corrupts under OneDrive sync.** Turbopack panicked in
+  `turbo-persistence/src/static_sorted_file.rs` ("range start index … out of range") and the dev
+  server died on startup. `rm -rf .next` fixed it instantly.
+- **`node_modules` is effectively uncopyable out of OneDrive** — `rsync` managed ~2 MB in 7 minutes
+  on a 608 MB tree. To build in a worktree, run `npm ci --prefer-offline` inside it (local disk,
+  seconds). Reading `node_modules` in place is fine; only copying out stalls. Turbopack also rejects
+  a symlinked `node_modules` pointing outside the project root.
+- **Production returns `401` for `/api/*` paths that do not exist**, because `proxy.ts` answers
+  before Next can 404. The two 401s are distinguishable: the proxy's is flat
+  `{"error":"Unauthorized"}`, the API's is nested `{"error":{"code":"unauthorized",…}}`. Useful when
+  checking whether a route is actually deployed.
+- **Local `main` was 7 commits stale** at PR #10 while `origin/main` was at PR #16. Always
+  `git fetch` and diff against `origin/main`, never local `main`.
+
+---
+
 ## Open / next
 
-### 1. Commit + PR everything — needs permission
-47 files, working locally, nothing pushed. Covers both the OTP migration and usage reporting.
+### 1. ~~Commit + PR everything~~ — done
+Shipped across PRs #13–#17. Working tree is clean of tracked changes as of 2026-10-24.
 
 ### 2. Verify the AI rates
 `lib/usage/rates.ts` ships deliberately unverified. Until someone checks it and sets
@@ -352,7 +514,9 @@ start clean.
 - **Session revocation:** `verifySession` never hits the DB, so `is_active = false` takes up
   to 7 days to lock someone out. Note `is_admin` does *not* have this problem — `requireAdmin()`
   re-reads the row on every request.
-- Remove `DATABASE_URL` from `.env.local` and Vercel once OTP is deployed successfully.
+- **Remove `DATABASE_URL` from `.env.local` and Vercel.** OTP is long deployed; the value
+  still sitting there is the old SQL Server connection string **with its password in plaintext**,
+  for a service that is no longer used. Confirmed stale 2026-10-21.
 - Drop the SQL Server `bbdo_users` table — deliberately left intact as a rollback path.
   User's call.
 - `otp_attempts` is swept at 7 days, so it cannot answer "who logged in last month".
@@ -367,6 +531,30 @@ That the login email arrives from `noreply@impactbbdo.ae`, contains a **6-digit 
 link**, and that **exactly one** email arrives per request — the last of which is what
 validates the `uninstrumentedFetch` guard.
 
+### 6. Open from the public API work — raised 2026-10-21
+
+- **`extractText` has had no runtime coverage.** The API verification sent a `prompt`, not
+  documents (`api_briefs.corpus_len = 0`), so the upload path is verbatim-by-inspection only.
+  Closing this is one action: sign in and upload a PDF **and** a DOCX on a brief. The larger
+  refactor, `generateBriefAnswers`, *was* exercised end to end and produced a correct brief.
+- **`docs/API.md` still says the rate limit default is 60.** The live Pulse key is 20/hour. It
+  also does not yet state the `questions[]`-vs-`answers`-key-order rule, which consumers must
+  follow — that is currently only in the published integration guide.
+- **Two near-identically-titled integration artifacts exist.** The current one is
+  *Pulse Integration Guide* (`f6508277…`, 2026-10-21). An older *Pulse Integration Contract*
+  (`821540bb…`, 2026-10-15) documents **no rate limit at all** and lacks the key-order rule and
+  the credential-handling guidance. Recommend retiring the older one — if Pulse integrates against
+  it they will hit 429s with no explanation. Its embedded `bbdo_sk_xxxx…` is a placeholder, so
+  there is no credential in it.
+- **A share URL the user intended to send Pulse (`claude.ai/artifact/XR8JTH9s9Ks3bpe1sGsgFh`)
+  could not be identified** — it matches none of the 33 artifacts owned by or shared with the
+  account, and fetching it returned only the page shell. Unresolved; confirm before sending.
+- **One test row sits in `api_briefs`** (P&O social brief, `external_id = pulse-test-001`) plus one
+  `usage_events` row at $0.069 from the same verification. Real spend, not real work — delete if
+  the API tables should start clean.
+- **Artifacts are private until shared.** Sending an artifact link without using the page's share
+  menu gets the recipient a permission error.
+
 ---
 
 ## Reference
@@ -379,9 +567,18 @@ Route gating is `proxy.ts` (**not** `middleware.ts`). Session is a jose JWT cook
 `gpt-4o` (Shamal chat) · `whisper-1` (transcription).
 Prompt caching uses 3 of the 4 available breakpoints on both Anthropic routes.
 
-**Users:** 27 rows in `bbdo_users` (25 active, 2 inactive as last counted). Ids are the
+**Users:** **82** rows in `bbdo_users` (as counted 2026-10-21). Ids are the
 original SQL Server integers, carried over. User rows are **never deleted** — access is
 revoked with `is_active = false` — so historical brief attribution stays intact permanently.
 
 **Scripts** — all run as `node --env-file=.env.local scripts/<name>.mjs`:
-`otp-create-user.mjs` · `db-activate.mjs` · `otp-sync-users.mjs` · `otp-breakglass.mjs`
+`otp-create-user.mjs` · `db-activate.mjs` · `otp-sync-users.mjs` · `otp-breakglass.mjs` ·
+`otp-import-xlsx.mjs`
+
+**API-key scripts** (same invocation) — see the `manage-access` skill for traps:
+`api-key-create.mjs --name "…" [--clients a,b] [--tiers big-idea] [--rate 20]` ·
+`api-key-list.mjs [--all]` · `api-key-revoke.mjs (--id <uuid> | --prefix bbdo_sk_xxxx)`
+
+**Rotating the Pulse key** is a four-step sequence, in this order so there is no window where
+neither key works: mint the new key → verify it with `GET /me` on production → revoke the old
+one by id → update `EXPECTED_PREFIX` in the consumer's `scripts/set-brief-key.mjs` and re-run it.
