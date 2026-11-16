@@ -21,7 +21,15 @@ import type { SessionPayload } from '@/lib/session';
  * SERVER ONLY — goes through the service-role client.
  */
 
-export type UsageRoute = 'agency/prefill' | 'agency/chat' | 'chat' | 'transcribe' | 'api/v1/briefs';
+export type UsageRoute =
+  | 'agency/prefill'
+  | 'agency/chat'
+  | 'chat'
+  | 'transcribe'
+  | 'api/v1/briefs'
+  // Distilling an uploaded brand document into brand context. Admin-triggered and infrequent,
+  // but it is a real model call and must show up in the report like every other one.
+  | 'admin/distil-document';
 export type UsageProvider = 'anthropic' | 'openai';
 
 export interface RecordUsageInput {
