@@ -5,7 +5,7 @@ import { anthropicUsage, recordUsage } from '@/lib/usage/record';
 import { requireApiKey, assertClientAndTierAllowed, stampKeyUsed } from '@/lib/api/auth';
 import { checkApiRateLimit, recordApiRequest } from '@/lib/api/rate-limit';
 import { buildCorpusFromDocuments } from '@/lib/api/documents';
-import { resolveClientId } from '@/lib/clients/resolve';
+import { resolveClientByName } from '@/lib/clients/registry';
 import { composeIdeaPrompt, parseIdea, IDEA_SCALE_TO_BRIEF_TYPE } from '@/lib/api/idea-prompt';
 import { createApiBrief, findByIdempotencyKey } from '@/lib/api/briefs-store';
 import { ApiFailure, apiError, withApiErrorHandling } from '@/lib/api/errors';
@@ -69,14 +69,20 @@ export async function POST(req: Request) {
     // Consumers identify brands by their own display names ("McVitie's", "P&O"), so accept
     // those as well as our slugs. Everything downstream — scope check, persistence,
     // metering — uses the resolved canonical id, so the data has one spelling per client.
+    //
+    // Resolved across BOTH registries: the compile-time configs and brands onboarded from
+    // Pulse. One read gives us the id and the config, and this is the call that makes a
+    // synced brand briefable over the API at all — resolveClientId (static only) would 404
+    // a brand that /catalog had just advertised.
     const requestedClient = requiredString(body.clientId, 'clientId');
-    const clientId = resolveClientId(requestedClient);
-    if (!clientId) {
+    const client = await resolveClientByName(requestedClient);
+    if (!client) {
       throw new ApiFailure(
         'not_found',
         `Unknown client: "${requestedClient}". Call GET /api/v1/catalog for the clients this key may use and the names it accepts.`,
       );
     }
+    const clientId = client.id;
 
     // An Idea carries its own scale, which implies the tier — so a trend-led consumer can
     // post the Idea alone. An explicit briefType always wins.
@@ -94,7 +100,7 @@ export async function POST(req: Request) {
     }
 
     // 404 for unknown, 403 for out-of-scope — see assertClientAndTierAllowed.
-    assertClientAndTierAllowed(key, clientId, briefType);
+    assertClientAndTierAllowed(key, client, briefType);
 
     const config = getAgencyBriefConfig(briefType);
     if (!config) throw new ApiFailure('not_found', `Unknown brief type: ${briefType}`);
@@ -153,7 +159,7 @@ export async function POST(req: Request) {
 
     const { answers, response } = await generateBriefAnswers({
       config,
-      clientId,
+      client,
       corpus,
       voiceTranscript,
       textNotes,

@@ -5,6 +5,22 @@ description: Add a new agency client to the Brief Creator, or update an existing
 
 # Add a client
 
+## First: is this brand already on Pulse?
+
+There are now **two** ways to onboard a brand, and this skill is the slower one.
+
+If the brand already exists on Impact BBDO Pulse (the Trend Application), an admin can onboard
+it at **`/agency/admin/pulse`** in a few clicks — it pulls the brand's guidelines, competitive
+set, themes and tracked vocabulary straight from Pulse and needs no code change and no deploy.
+Check there before writing a file by hand.
+
+Use this skill when the brand is **not** on Pulse, when Pulse has no guideline authored for it
+(5 of 11 brands were in that state on 2026-11-09), or when the brand context has to be authored
+from a toolkit the client supplied rather than from Pulse's data. A hand-authored client always
+wins over a synced one — the picker will not show the same brand twice.
+
+## The hand-authored route
+
 A client is one `ClientConfig` object wired into four places. Miss any of them and the
 failure is quiet rather than loud — the app keeps building and the card keeps rendering, just
 wrongly. This has been done seven times (Starbucks, Sadia, Internal, Social, P&O, Google

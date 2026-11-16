@@ -5,9 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { getAgencyBriefConfig, isBriefTypeAllowedForClient, type PrefillResult } from '@/lib/questions/agency';
-import { getClientConfig } from '@/lib/clients';
+import type { ClientCard } from '@/lib/clients/card';
 import { AgencyIntake } from '@/components/agency/AgencyIntake';
 import { AgencyReview, type SaveState } from '@/components/agency/AgencyReview';
 import { TOOLBAR_PILL } from '@/components/agency/AgencyToolbar';
@@ -28,10 +28,43 @@ function AgencyBriefInner({ tier }: { tier: string }) {
   const searchParams = useSearchParams();
   const clientId = searchParams.get('client') ?? undefined;
   const resumeId = searchParams.get('brief') ?? undefined;
-  const clientConfig = clientId ? getClientConfig(clientId) : undefined;
   const config = getAgencyBriefConfig(tier);
+
+  // The client is FETCHED, not imported: it may be a compile-time config or a brand synced
+  // from Pulse, and only the server can tell. `undefined` means still resolving, `null` means
+  // resolved and no such client — a distinction this page cannot collapse, because the guard
+  // below redirects on "no such client" and would otherwise fire on every load before the
+  // fetch returned, bouncing every synced brand straight back to the picker.
+  const [clientConfig, setClientConfig] = useState<ClientCard | null | undefined>(undefined);
+  const clientResolved = clientConfig !== undefined;
+
+  useEffect(() => {
+    if (!clientId) {
+      setClientConfig(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/clients');
+        if (!res.ok) throw new Error(`Failed to load clients (${res.status})`);
+        const data = await res.json();
+        if (cancelled) return;
+        setClientConfig((data.clients as ClientCard[] | undefined)?.find((c) => c.id === clientId) ?? null);
+      } catch (err) {
+        console.error('Could not resolve the client for this brief:', err);
+        // Treated as "no such client", so the guard below sends the user back to the picker
+        // rather than leaving them on a half-rendered brief with no brand context.
+        if (!cancelled) setClientConfig(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId]);
+
   // The tier must also be one this client is actually scoped to raise.
-  const tierAllowed = isBriefTypeAllowedForClient(tier, clientId);
+  const tierAllowed = clientConfig ? isBriefTypeAllowedForClient(tier, { briefTypes: clientConfig.briefTypes }) : false;
 
   const [step, setStep] = useState<Step>('intake');
   const [corpus, setCorpus] = useState('');
@@ -57,12 +90,19 @@ function AgencyBriefInner({ tier }: { tier: string }) {
   // otherwise send the user back to pick one. Resume runs only after this passes, so a
   // brief whose tier is no longer allowed for its client bounces instead of half-rendering.
   useEffect(() => {
-    if (!config || !clientConfig || !tierAllowed) router.replace('/agency');
-  }, [config, clientConfig, tierAllowed, router]);
+    // An unknown tier is decidable immediately; anything involving the client has to wait for
+    // the fetch above, or a valid brief would be redirected away before it could render.
+    if (!config) {
+      router.replace('/agency');
+      return;
+    }
+    if (!clientResolved) return;
+    if (!clientConfig || !tierAllowed) router.replace('/agency');
+  }, [config, clientResolved, clientConfig, tierAllowed, router]);
 
   // Resume an existing brief from ?brief=<id>.
   useEffect(() => {
-    if (!resumeId || !config || !clientConfig || !tierAllowed) return;
+    if (!resumeId || !config || !clientResolved || !clientConfig || !tierAllowed) return;
     let cancelled = false;
 
     (async () => {
@@ -87,7 +127,7 @@ function AgencyBriefInner({ tier }: { tier: string }) {
     return () => {
       cancelled = true;
     };
-  }, [resumeId, config, clientConfig, tierAllowed, router]);
+  }, [resumeId, config, clientResolved, clientConfig, tierAllowed, router]);
 
   // Clear any pending autosave on unmount so it cannot fire against a stale brief.
   useEffect(() => {
@@ -187,6 +227,16 @@ function AgencyBriefInner({ tier }: { tier: string }) {
     },
     [clientId, tier, config],
   );
+
+  // Resolving: a spinner, not a blank page. The guard above has not decided yet, and
+  // returning null here would flash an empty grey screen on every brief.
+  if (config && clientId && !clientResolved) {
+    return (
+      <main className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#d9d8d8' }}>
+        <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
+      </main>
+    );
+  }
 
   if (!config || !clientConfig || !tierAllowed) return null;
 

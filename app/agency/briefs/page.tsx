@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { AgencyToolbar, TOOLBAR_PILL } from '@/components/agency/AgencyToolbar';
 import { ArrowLeft, ArrowRight, FileText, Trash2, Loader2 } from 'lucide-react';
 import { getAgencyBriefConfig } from '@/lib/questions/agency';
-import { getClientConfig } from '@/lib/clients';
+import type { ClientCard } from '@/lib/clients/card';
 import type { BriefStatus } from '@/lib/briefs/store';
 
 interface BriefSummary {
@@ -46,6 +46,30 @@ export default function BriefHistoryPage() {
   const [configured, setConfigured] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Client labels, keyed by id. Fetched rather than imported, because a brief's client may be
+  // a brand synced from Pulse, which is a database row and not a module.
+  const [clientLabels, setClientLabels] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/clients');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const labels: Record<string, string> = {};
+        for (const c of (data.clients ?? []) as ClientCard[]) labels[c.id] = c.label;
+        setClientLabels(labels);
+      } catch {
+        // A missing label degrades to the raw client_id below, which is the behaviour this
+        // list has always had for a client no longer in the registry. Not worth an error state.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +174,9 @@ export default function BriefHistoryPage() {
           ) : (
             <div className="space-y-3">
               {briefs.map((b) => {
-                const client = getClientConfig(b.client_id);
+                // Falls back to the raw id for a client that has left the registry — an
+                // archived static client, or a synced brand since deactivated.
+                const clientLabel = clientLabels[b.client_id] ?? b.client_id;
                 const tierConfig = getAgencyBriefConfig(b.tier);
                 const badge = STATUS_STYLES[b.status] ?? STATUS_STYLES.in_progress;
                 return (
@@ -164,7 +190,7 @@ export default function BriefHistoryPage() {
                           {badge.label}
                         </span>
                         <span className="text-xs text-slate-500 font-medium">
-                          {client?.label ?? b.client_id} · {tierConfig?.type.label ?? b.tier}
+                          {clientLabel} · {tierConfig?.type.label ?? b.tier}
                         </span>
                       </div>
                       <p className="font-bold text-slate-800 truncate">{b.title}</p>

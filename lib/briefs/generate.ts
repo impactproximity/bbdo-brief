@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getClientConfig, buildClientContextBlock } from '@/lib/clients';
+import { buildClientContextBlock, type ClientConfig } from '@/lib/clients';
 import type { AgencyBriefConfig, PrefillResult } from '@/lib/questions/agency';
 
 /**
@@ -19,7 +19,17 @@ export const BRIEF_MAX_OUTPUT_TOKENS = 8192;
 
 export interface GenerateBriefInput {
   config: AgencyBriefConfig;
-  clientId?: string | null;
+  /**
+   * The RESOLVED client, not an id.
+   *
+   * It used to be an id that this module looked up in the compile-time registry, which meant
+   * a brand onboarded from Pulse silently generated a brief with no brand context at all —
+   * the worst possible failure, because the output still looks like a brief. Resolution is
+   * now the caller's job (lib/clients/registry.resolveClientConfig), and it is async, which
+   * is exactly why it does not belong in here: everything in this file stays synchronous and
+   * free of I/O so that both entry points provably assemble the same prompt.
+   */
+  client?: ClientConfig | null;
   corpus?: string;
   voiceTranscript?: string;
   textNotes?: string;
@@ -65,7 +75,7 @@ export function buildAnswerProperties(config: AgencyBriefConfig): Record<string,
  * operational rules. The first two carry cache_control because they are stable across every
  * call for a given tier and client; the rules block closes the prefix.
  */
-export function buildSystemBlocks(config: AgencyBriefConfig, clientId?: string | null): Anthropic.TextBlockParam[] {
+export function buildSystemBlocks(config: AgencyBriefConfig, client?: ClientConfig | null): Anthropic.TextBlockParam[] {
   const questionSchema = buildQuestionSchema(config);
 
   const baseStrategicPrompt = config.systemPrompt
@@ -84,9 +94,10 @@ You will pre-fill answers for the "${config.documentTitle}" using the submit_bri
 QUESTIONS TO FILL:
 ${questionSchema}`;
 
-  // Always-on, prompt-cached client brand context (omitted when no client / no authored content).
-  const clientConfig = clientId ? getClientConfig(clientId) : undefined;
-  const clientContext = clientConfig ? buildClientContextBlock(clientConfig) : null;
+  // Always-on, prompt-cached client brand context (omitted when no client / no authored
+  // content). A synced brand reaches here already composed, so a Pulse-onboarded client and
+  // a hand-authored one produce the same block.
+  const clientContext = client ? buildClientContextBlock(client) : null;
 
   return [
     { type: 'text', text: baseStrategicPrompt, cache_control: { type: 'ephemeral' } },
@@ -106,17 +117,18 @@ export function buildCorpusBlock(corpus?: string, voiceTranscript?: string, text
  */
 export async function generateBriefAnswers({
   config,
-  clientId,
+  client,
   corpus,
   voiceTranscript,
   textNotes,
 }: GenerateBriefInput): Promise<GenerateBriefResult> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  // `anthropic`, not `client` — `client` is the brand now, and the two would shadow.
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const response = await client.messages.create({
+  const response = await anthropic.messages.create({
     model: BRIEF_MODEL,
     max_tokens: BRIEF_MAX_OUTPUT_TOKENS,
-    system: buildSystemBlocks(config, clientId),
+    system: buildSystemBlocks(config, client),
     tools: [
       {
         name: 'submit_brief_answers',

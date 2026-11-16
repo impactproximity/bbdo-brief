@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, Table, TableCell, TableRow, WidthType, BorderStyle, ImageRun, Header, TabStopPosition, TabStopType } from 'docx';
 import { getBriefConfig } from '@/lib/questions';
 import { getAgencyBriefConfig } from '@/lib/questions/agency';
-import { getClientConfig } from '@/lib/clients';
+import type { ClientConfig } from '@/lib/clients';
+import { resolveClientConfig } from '@/lib/clients/registry';
+import { readPulseClientLogo } from '@/lib/clients/pulse-store';
+import { docxImageType, fitToBox, imageDimensions, LOGO_BOX } from '@/lib/clients/logo-size';
 import fs from 'fs';
 import path from 'path';
 
@@ -231,6 +234,61 @@ function buildSectionForQuestion(
     return elements;
 }
 
+interface HeaderLogo {
+    data: Buffer;
+    transformation: { width: number; height: number };
+    type: 'png' | 'jpg' | 'gif' | 'bmp';
+}
+
+/**
+ * A compile-time client's logo, read from public/ exactly as before.
+ *
+ * Sizing stays hand-set (logoWidth/logoHeight, defaulting to 100x26) rather than measured:
+ * those numbers were chosen by eye per brand and already look right, and recomputing them
+ * would silently change the header of every existing client's briefs.
+ */
+function loadStaticLogo(config: ClientConfig): HeaderLogo | null {
+    if (!config.logo) return null;
+    const data = fs.readFileSync(path.join(process.cwd(), 'public', config.logo));
+    const ext = path.extname(config.logo).toLowerCase();
+    return {
+        data,
+        // The hand-set values, unchanged. P&O is 38x35 because its mark is nearly square;
+        // measuring instead would silently restyle every existing client's header.
+        transformation: { width: config.logoWidth ?? 100, height: config.logoHeight ?? 26 },
+        type: ext === '.jpg' || ext === '.jpeg' ? 'jpg' : 'png',
+    };
+}
+
+/**
+ * A Pulse-synced brand's logo, from the database.
+ *
+ * Sized from the image's own header rather than a default, because nobody picked a width for
+ * this brand: Pulse hands over bytes with no display size, and forcing the wide 100x26
+ * default onto a square mark renders it squashed in every brief. See lib/clients/logo-size.ts.
+ *
+ * Returns null — not an error — for a brand with no logo, and for an SVG, which docx cannot
+ * embed without a raster fallback. Both land on the name-TextRun path.
+ */
+async function loadSyncedLogo(clientId: string): Promise<HeaderLogo | null> {
+    const stored = await readPulseClientLogo(clientId);
+    if (!stored) return null;
+
+    const type = docxImageType(stored.contentType);
+    if (!type) {
+        console.warn(`Client logo not embeddable for "${clientId}": docx cannot carry ${stored.contentType}`);
+        return null;
+    }
+
+    const intrinsic = imageDimensions(stored.buffer);
+    return {
+        data: stored.buffer,
+        // No intrinsic size readable: keep the historic default rather than guessing.
+        transformation: intrinsic ? fitToBox(intrinsic, LOGO_BOX) : { width: 100, height: 26 },
+        type,
+    };
+}
+
 export async function POST(req: Request) {
     try {
         const { briefType, clientId, responses, briefSource } = (await req.json()) as {
@@ -294,24 +352,33 @@ export async function POST(req: Request) {
             );
         } else {
             // Agency flow: brand the header per client when one is selected.
-            const clientConfig = clientId ? getClientConfig(clientId) : undefined;
+            //
+            // Resolved across both registries. A brand onboarded from Pulse has no file under
+            // public/ — Vercel's filesystem is read-only at runtime — so its bytes come from
+            // the database instead. That is the ONE place the two kinds of client differ.
+            const clientConfig = await resolveClientConfig(clientId);
             let clientLogoEmbedded = false;
 
-            if (clientConfig?.logo) {
+            if (clientConfig) {
                 try {
-                    const logoData = fs.readFileSync(path.join(process.cwd(), 'public', clientConfig.logo));
-                    const ext = path.extname(clientConfig.logo).toLowerCase();
-                    headerChildren.push(
-                        new TextRun({ text: '\t' }),
-                        new ImageRun({
-                            data: logoData,
-                            transformation: { width: clientConfig.logoWidth ?? 100, height: clientConfig.logoHeight ?? 26 },
-                            type: ext === '.jpg' || ext === '.jpeg' ? 'jpg' : 'png',
-                        }),
-                    );
-                    clientLogoEmbedded = true;
+                    const logo = clientConfig.source === 'pulse'
+                        ? await loadSyncedLogo(clientConfig.id)
+                        : loadStaticLogo(clientConfig);
+
+                    if (logo) {
+                        headerChildren.push(
+                            new TextRun({ text: '\t' }),
+                            new ImageRun({
+                                data: logo.data,
+                                transformation: logo.transformation,
+                                type: logo.type,
+                            }),
+                        );
+                        clientLogoEmbedded = true;
+                    }
                 } catch (err) {
-                    // Logo asset missing/unreadable — fall back to the client name below.
+                    // Missing file, unreadable row, unembeddable format — fall back to the
+                    // client name below. A brief must still generate without its logo.
                     console.warn(`Client logo not embedded for "${clientConfig.id}":`, err instanceof Error ? err.message : err);
                 }
             }

@@ -29,10 +29,29 @@ lowercased email. Do not migrate to GoTrue ids — it would mean uuid ids and si
 user.
 
 **`is_active` is the complete definition of "may sign in."** There is no password.
-`is_admin` is separate and controls only the usage report.
+`is_admin` is separate and controls the usage report and the Pulse brand-sync dashboard.
+
+**A client brand comes from one of two registries, and server code must read both.** The
+compile-time configs in `lib/clients/<id>.ts` are no longer the whole truth: brands onboarded
+from Pulse are rows in `pulse_clients`. `lib/clients/registry.ts` is the only correct source —
+`getAllClientConfigs()` / `resolveClientConfig()` / `resolveClientByName()`, all async. The
+synchronous `CLIENTS` and `getClientConfig()` still exist and still see only the seven
+compile-time clients, so reaching for them in a route silently excludes every synced brand —
+which looks like "that brand isn't onboarded" rather than like a bug.
+
+**Brand prose must not reach the browser.** `proposition`, `brandGuidelines` and
+`promptGuidance` are client-confidential strategy. Pages get card fields from
+`GET /api/clients` (see `lib/clients/card.ts`); importing `@/lib/clients` into a `'use client'`
+file puts every brand's full strategy into a public JS chunk — measured, not theoretical: it
+did exactly that until 2026-11-09.
 
 **Migrations run before the code that needs them.** `db/supabase/` is numbered and applied by
 hand in the Supabase SQL editor. Prefer additive changes (`add column if not exists`).
+
+**Pulse brand sync needs `PULSE_API_BASE_URL` + `PULSE_PARTNER_TOKEN`, and never
+`TRENDS_API_TOKEN`.** Pulse rejects that second value on `/api/partner/*` by design, so the two
+sides revoke independently. Unset either of ours and the dashboard renders its
+"not configured" state rather than failing.
 
 **`lib/usage/rates.ts` prices are unverified.** `RATES_LAST_VERIFIED` is null, so the admin
 page warns on every cost figure. Token counts are measured and accurate; dollars are derived
@@ -59,5 +78,7 @@ See the `manage-access` skill for what each one does and the traps.
 
 ## Skills
 
-- **`add-client`** — onboarding a brand, or fixing a client card that renders wrongly
+- **`add-client`** — onboarding a brand by hand, or fixing a client card that renders wrongly.
+  Note there are now two ways to onboard: that one, and `/agency/admin/pulse` for a brand that
+  already exists on Pulse.
 - **`manage-access`** — users, admin rights, bulk import, "I can't log in"
