@@ -454,6 +454,9 @@ function RowActions({
           >
             {brand.status === 'stale' ? 'Refresh' : 'Re-pull'}
           </Button>
+          <Link href={`/agency/admin/pulse/${brand.pulseBrandId}`} className={TOOLBAR_PILL} title="Edit this brand's context, and upload documents">
+            Edit context
+          </Link>
           <Button size="sm" variant="ghost" className="rounded-xl text-slate-500" onClick={() => onSetActive(false)}>
             Hide
           </Button>
