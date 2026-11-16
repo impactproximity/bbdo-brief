@@ -1,4 +1,5 @@
 import { CLIENTS } from './index';
+import type { ClientConfig } from './types';
 
 /**
  * Resolve whatever a consuming platform calls a brand into our canonical client id.
@@ -11,6 +12,12 @@ import { CLIENTS } from './index';
  *
  * Deliberately NOT fuzzy. Matching is exact after normalisation, so a typo fails loudly
  * with a 404 instead of quietly generating a brief for the wrong brand.
+ *
+ * TAKES A LIST because there are now two registries. The compile-time configs in
+ * lib/clients/ are a synchronous import; brands synced from Pulse are rows that have to be
+ * read. Both resolve by the same rules, and having one implementation is what guarantees
+ * that "Etihad Airways" resolves identically whichever registry it came from — see
+ * lib/clients/registry.ts for the merged, async callers.
  */
 
 /** Lowercase and drop everything that is not a letter or digit. "McVitie's" -> "mcvities". */
@@ -18,17 +25,17 @@ function normalise(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-export function resolveClientId(input: string): string | null {
+export function resolveClientIdIn(clients: ClientConfig[], input: string): string | null {
   const raw = input.trim();
   if (!raw) return null;
 
   // Exact id first — the common case, and the only one that needs no normalisation.
-  if (CLIENTS.some((c) => c.id === raw)) return raw;
+  if (clients.some((c) => c.id === raw)) return raw;
 
   const needle = normalise(raw);
   if (!needle) return null;
 
-  for (const client of CLIENTS) {
+  for (const client of clients) {
     if (normalise(client.id) === needle) return client.id;
     if (normalise(client.label) === needle) return client.id;
     if (client.aliases?.some((a) => normalise(a) === needle)) return client.id;
@@ -45,8 +52,8 @@ export function resolveClientId(input: string): string | null {
  * normalise to the same key, but a consumer reading only "mcvities" would never learn that
  * the display name it already holds is accepted — which is the whole point of this list.
  */
-export function acceptedNamesFor(clientId: string): string[] {
-  const client = CLIENTS.find((c) => c.id === clientId);
+export function acceptedNamesIn(clients: ClientConfig[], clientId: string): string[] {
+  const client = clients.find((c) => c.id === clientId);
   if (!client) return [];
 
   const seen = new Set<string>();
@@ -58,4 +65,22 @@ export function acceptedNamesFor(clientId: string): string[] {
     }
   }
   return out;
+}
+
+/**
+ * Static-registry-only resolution.
+ *
+ * Kept because a few callers genuinely cannot await — and because it is the right
+ * implementation for answering "does this id collide with a compile-time client", which the
+ * onboarding route needs. Anything serving a user or a consuming platform should use
+ * resolveClientIdAsync from lib/clients/registry.ts instead, or it will 404 a brand that was
+ * onboarded from Pulse.
+ */
+export function resolveClientId(input: string): string | null {
+  return resolveClientIdIn(CLIENTS, input);
+}
+
+/** Static-registry-only. See resolveClientId above. */
+export function acceptedNamesFor(clientId: string): string[] {
+  return acceptedNamesIn(CLIENTS, clientId);
 }

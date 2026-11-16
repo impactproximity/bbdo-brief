@@ -32,10 +32,44 @@ export interface ClientConfig {
   logoWidth?: number; // optional ImageRun width  (default ~100)
   logoHeight?: number; // optional ImageRun height (default ~26)
 
+  /**
+   * A logo served by one of our own routes, used INSTEAD of `logo` when the bytes are not a
+   * file under public/ — i.e. a brand synced from Pulse, whose logo lives in the database
+   * because Vercel's filesystem is read-only at runtime. Always an absolute path on this
+   * origin, so next/image needs no images.remotePatterns entry.
+   *
+   * When both are absent the card falls back to the lucide `icon` and the .docx header to a
+   * name TextRun, exactly as a static client with no `logo` already does.
+   */
+  logoUrl?: string;
+
+  /**
+   * Which registry this config came from. Absent means 'static'.
+   *
+   * Load-bearing in exactly one place: the .docx header reads logo bytes with a synchronous
+   * filesystem read for a static client and from the database for a 'pulse' one. Everything
+   * else treats the two kinds identically, which is the point.
+   */
+  source?: 'static' | 'pulse';
+
   // --- Always-on, prompt-cached strategic context (authored from client docs) ---
   // Any field left as an empty string is simply omitted from the injected context,
   // so a placeholder config produces zero change to AI behaviour until content lands.
   proposition: string;
   brandGuidelines: string;
   promptGuidance: string; // the per-client prompt doc, applied across all 4 brief categories
+
+  /**
+   * Brand context distilled from documents an admin uploaded, as one Markdown block.
+   *
+   * Optional and absent for every compile-time client, which keeps their prompt byte-identical
+   * — asserted, not assumed: P&O's block is 10,287 characters with three sections, and adding
+   * this field must not change that.
+   *
+   * Unlike the three fields above, this text is MODEL-WRITTEN: distilled from an upload, then
+   * reviewed and edited by an admin before it was allowed to count. It is kept as its own
+   * field, and emitted as its own labelled block, rather than being folded into
+   * brandGuidelines — so that provenance survives all the way into the prompt.
+   */
+  documentContext?: string;
 }

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LogoutButton } from '@/components/LogoutButton';
-import { BarChart3, History } from 'lucide-react';
+import { Activity, BarChart3, History } from 'lucide-react';
 
 /**
  * The navigation pills in the agency card headers.
@@ -33,6 +33,8 @@ interface AgencyToolbarProps {
   /** Hide the link to the page you are already on. */
   showBriefs?: boolean;
   showUsage?: boolean;
+  /** The Pulse brand-sync dashboard. Admin-only, same as showUsage. */
+  showPulse?: boolean;
 }
 
 /**
@@ -47,16 +49,18 @@ interface AgencyToolbarProps {
  * As a row, the title simply cannot collide with the buttons at any width or any length.
  * `left` takes the page's Back / Change-client control so both sides share one row.
  */
-export function AgencyToolbar({ left, showBriefs = true, showUsage = true }: AgencyToolbarProps) {
-  // Whether to offer the usage report.
+export function AgencyToolbar({ left, showBriefs = true, showUsage = true, showPulse = true }: AgencyToolbarProps) {
+  // Whether to offer the admin-only pages.
   //
-  // PRESENTATION ONLY. The real gate is requireAdmin() inside /agency/admin and
-  // /api/admin/usage, so a non-admin who guesses the URL still gets nothing. Failing closed
-  // (no link) is the right default, which is why a failed lookup is swallowed.
+  // PRESENTATION ONLY. The real gate is requireAdmin() inside each /agency/admin page and
+  // each /api/admin route, so a non-admin who guesses the URL still gets nothing. Failing
+  // closed (no link) is the right default, which is why a failed lookup is swallowed.
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (!showUsage) return;
+    // Either admin pill needs the lookup — gating on showUsage alone would leave the Pulse
+    // link invisible on a page that hides Usage.
+    if (!showUsage && !showPulse) return;
     let cancelled = false;
     (async () => {
       try {
@@ -71,7 +75,7 @@ export function AgencyToolbar({ left, showBriefs = true, showUsage = true }: Age
     return () => {
       cancelled = true;
     };
-  }, [showUsage]);
+  }, [showUsage, showPulse]);
 
   return (
     <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
@@ -88,6 +92,12 @@ export function AgencyToolbar({ left, showBriefs = true, showUsage = true }: Age
           <Link href="/agency/admin" className={TOOLBAR_PILL} title="Usage">
             <BarChart3 className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Usage</span>
+          </Link>
+        )}
+        {showPulse && isAdmin && (
+          <Link href="/agency/admin/pulse" className={TOOLBAR_PILL} title="Pulse brands">
+            <Activity className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Pulse brands</span>
           </Link>
         )}
         <LogoutButton />

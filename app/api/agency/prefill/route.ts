@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAgencyBriefConfig, type PrefillResult } from '@/lib/questions/agency';
 import { generateBriefAnswers } from '@/lib/briefs/generate';
 import { getSession } from '@/lib/auth';
+import { resolveClientConfig } from '@/lib/clients/registry';
 import { anthropicUsage, recordUsage } from '@/lib/usage/record';
 
 export async function POST(req: Request) {
@@ -27,12 +28,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ answers });
     }
 
+    // Resolve the brand here rather than inside generate.ts. It can be a compile-time config
+    // or a row synced from Pulse, and telling them apart is a database read — which
+    // generate.ts deliberately cannot do, so that both surfaces provably build the same
+    // prompt from the same inputs.
+    const client = await resolveClientConfig(clientId);
+
     // Prompt assembly and the model call live in lib/briefs/generate.ts, shared with the
     // public API so the two surfaces cannot drift. Everything below — session, metering,
     // the mock short-circuit above — stays owned by this route.
     const { answers, response } = await generateBriefAnswers({
       config,
-      clientId,
+      client,
       corpus,
       voiceTranscript,
       textNotes,

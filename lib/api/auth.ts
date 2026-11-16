@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { getAdminClient, isSupabaseConfigured } from '@/lib/supabase/admin';
-import { getClientConfig } from '@/lib/clients';
+import type { ClientConfig } from '@/lib/clients';
 import { isBriefTypeAllowedForClient } from '@/lib/questions/agency';
 import { ApiFailure } from './errors';
 
@@ -105,24 +105,26 @@ export function clientsForKey(key: ApiKeyRecord, allClientIds: string[]): string
 /**
  * Validate a client + tier pair for this key.
  *
- * Order matters for the status code: an unknown client or tier is a 404 (the caller asked
- * for something that does not exist), while a real client outside the key's scope is a 403
- * (it exists, you may not use it).
+ * Order matters for the status code: an unknown tier is a 404 (the caller asked for
+ * something that does not exist), while a real client outside the key's scope is a 403 (it
+ * exists, you may not use it).
+ *
+ * TAKES THE RESOLVED CLIENT. It used to take an id and look it up with getClientConfig(),
+ * which saw only the compile-time registry — so a brand onboarded from Pulse would have been
+ * rejected here as "unknown client" even though /catalog had just advertised it. The caller
+ * resolves across both registries (registry.resolveClientByName) and answers its own 404 for
+ * an unresolvable name, where the spelling the consumer actually sent is still in scope for
+ * the error message. That also means the old `!client` branch here was redundant and is gone.
  */
-export function assertClientAndTierAllowed(key: ApiKeyRecord, clientId: string, briefType: string): void {
-  const client = getClientConfig(clientId);
-  if (!client) {
-    throw new ApiFailure('not_found', `Unknown client: ${clientId}`);
-  }
-
-  if (key.allowed_clients && key.allowed_clients.length > 0 && !key.allowed_clients.includes(clientId)) {
-    throw new ApiFailure('forbidden', `This API key is not scoped to client: ${clientId}`);
+export function assertClientAndTierAllowed(key: ApiKeyRecord, client: ClientConfig, briefType: string): void {
+  if (key.allowed_clients && key.allowed_clients.length > 0 && !key.allowed_clients.includes(client.id)) {
+    throw new ApiFailure('forbidden', `This API key is not scoped to client: ${client.id}`);
   }
 
   // Reuses the same guard the UI uses for hand-typed URLs, so the API can never reach a
   // tier the product does not offer that client.
-  if (!isBriefTypeAllowedForClient(briefType, clientId)) {
-    throw new ApiFailure('not_found', `Brief type "${briefType}" is not available for client "${clientId}".`);
+  if (!isBriefTypeAllowedForClient(briefType, client)) {
+    throw new ApiFailure('not_found', `Brief type "${briefType}" is not available for client "${client.id}".`);
   }
 
   if (key.allowed_tiers && key.allowed_tiers.length > 0 && !key.allowed_tiers.includes(briefType)) {

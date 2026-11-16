@@ -3,7 +3,6 @@ import { taskConfig } from './task';
 import { socialConfig } from './social';
 import { productionConfig } from './production';
 import { socialAlwaysOnConfig, socialCampaignConfig, socialLiveConfig } from './social-impact';
-import { getClientConfig } from '@/lib/clients';
 import type { AgencyBriefConfig, BriefType } from './types';
 
 export type { AgencyQuestion, AgencyBriefConfig, PrefillAnswer, PrefillResult } from './types';
@@ -36,10 +35,27 @@ export function getAgencyBriefConfig(tierId: string): AgencyBriefConfig | undefi
   return configs[tierId];
 }
 
-/** Brief types a client may raise, in the order declared. Empty for an unknown client. */
-export function getBriefTypesForClient(clientId: string | undefined): BriefType[] {
-  if (!clientId) return [];
-  const client = getClientConfig(clientId);
+/**
+ * The minimum a caller must know about a client to decide its tiers. Structural rather than
+ * `ClientConfig`, so this module stays free of any dependency on lib/clients.
+ */
+export interface ClientTierScope {
+  briefTypes?: string[];
+}
+
+/**
+ * Brief types a client may raise, in the order declared. Empty for no client.
+ *
+ * TAKES THE RESOLVED CLIENT, NOT AN ID. It used to call getClientConfig(clientId), which
+ * only ever saw the compile-time registry — so every brand onboarded from Pulse would have
+ * resolved to "unknown client" and been offered no tiers at all. The caller now resolves
+ * (lib/clients/registry.resolveClientConfig, which is async) and passes the result down.
+ *
+ * The two absent cases are genuinely different and both still work: no client at all means
+ * no tiers, while a client that declares no `briefTypes` gets the four defaults. That
+ * distinction is why this takes an object and not a bare `string[] | undefined`.
+ */
+export function getBriefTypesForClient(client: ClientTierScope | undefined | null): BriefType[] {
   if (!client) return [];
   return (client.briefTypes ?? DEFAULT_AGENCY_BRIEF_TYPE_IDS)
     .map((id) => configs[id]?.type)
@@ -47,6 +63,6 @@ export function getBriefTypesForClient(clientId: string | undefined): BriefType[
 }
 
 /** Guard for hand-typed /agency/brief/<tier>?client=<id> URLs. */
-export function isBriefTypeAllowedForClient(tierId: string, clientId: string | undefined): boolean {
-  return getBriefTypesForClient(clientId).some((t) => t.id === tierId);
+export function isBriefTypeAllowedForClient(tierId: string, client: ClientTierScope | undefined | null): boolean {
+  return getBriefTypesForClient(client).some((t) => t.id === tierId);
 }

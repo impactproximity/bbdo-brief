@@ -36,6 +36,14 @@ export function buildClientContextBlock(c: ClientConfig): string | null {
   if (c.proposition?.trim()) parts.push(`<proposition>\n${c.proposition.trim()}\n</proposition>`);
   if (c.brandGuidelines?.trim()) parts.push(`<brand_guidelines>\n${c.brandGuidelines.trim()}\n</brand_guidelines>`);
   if (c.promptGuidance?.trim()) parts.push(`<prompt_guidance>\n${c.promptGuidance.trim()}\n</prompt_guidance>`);
+  // Last, and labelled as source documents rather than as guidelines. It is distilled from an
+  // admin's upload, so it is the least authoritative of the four — and placing it after the
+  // guidelines means the brand's own authored positioning is read first.
+  if (c.documentContext?.trim()) {
+    parts.push(
+      `<brand_documents>\nBrand context drawn from documents supplied for this client. Where it conflicts with the guidelines above, the guidelines win.\n\n${c.documentContext.trim()}\n</brand_documents>`,
+    );
+  }
   if (parts.length === 0) return null;
   return `CLIENT CONTEXT — always-on brand context for ${c.label}. Tailor every answer to this brand: its proposition, voice and guidelines. Do not contradict it.\n\n${parts.join('\n\n')}`;
 }

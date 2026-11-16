@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAgencyBriefConfig } from '@/lib/questions/agency';
-import { getClientConfig, buildClientContextBlock } from '@/lib/clients';
+import { buildClientContextBlock } from '@/lib/clients';
+import { resolveClientConfig } from '@/lib/clients/registry';
 import { getSession } from '@/lib/auth';
 import { anthropicUsage, recordUsage } from '@/lib/usage/record';
 
@@ -73,8 +74,11 @@ Interaction rules:
 3. When the user asks for a rewrite, an alternative, or to sharpen/expand the answer, call the propose_update tool with the suggested replacement text. The replacement must follow the strategic principles above.
 4. When the user is just asking a question or thinking out loud, reply normally without calling the tool.`;
 
-    // Always-on, prompt-cached client brand context (omitted when no client / no authored content).
-    const clientConfig = clientId ? getClientConfig(clientId) : undefined;
+    // Always-on, prompt-cached client brand context (omitted when no client / no authored
+    // content). Resolved across both registries, so refining an answer for a brand synced
+    // from Pulse carries the same brand context the prefill did — if this still read only
+    // the compile-time registry, the chat would quietly drop it mid-brief.
+    const clientConfig = await resolveClientConfig(clientId);
     const clientContext = clientConfig ? buildClientContextBlock(clientConfig) : null;
 
     const systemBlocks: Anthropic.TextBlockParam[] = [

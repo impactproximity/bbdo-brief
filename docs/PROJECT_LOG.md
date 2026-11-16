@@ -416,6 +416,14 @@ diagnose. `model` comes back `null` on a replay because no model call was made.
 
 ## Running migrations without the Supabase SQL editor — new capability, 2026-10-21
 
+> ⚠️ **This no longer works as of 2026-11-09.** The `SUPABASE_ACCESS_TOKEN` below is dead —
+> every Management API call, including `GET /v1/projects`, returns `401 Invalid access token`.
+> Scoped tokens cannot be edited, so restoring this means creating a new one (same scope:
+> that project only, `Database → Full Access`, everything else `No Access`) and replacing the
+> value in `.env.local`. Until then migrations go through the Supabase SQL editor by hand.
+> The rest of this section is still accurate and worth keeping for when the token is replaced.
+
+
 Supabase project ref **`oqpcdkkofjkxzilhpxvc`**. `SUPABASE_ACCESS_TOKEN` now lives in
 `.env.local` — a **scoped** personal access token: that one project only, `Database → Full
 Access`, everything else `No Access`. Migrations can be applied directly:
@@ -469,6 +477,148 @@ from `BBDO_Trend_Application/` itself fails with `MODULE_NOT_FOUND`.
 - **Gotcha:** that script **hardcodes** `EXPECTED_PREFIX` at line 50. Every rotation therefore
   needs that one line updated to the new prefix, or it refuses the new key. `EXPECTED_LENGTH = 51`
   never changes (8 chars of prefix + 43 of base64url).
+
+---
+
+## Pulse brand sync — admin brand onboarding, 2026-11-09
+
+**Built, not shipped. Not yet verified end to end** — see Still blocked below. Nothing committed,
+nothing pushed, nothing deployed.
+
+Answers "a brand is live on Pulse, make it briefable here" without a developer. Until now a
+client brand was compile-time TypeScript: `lib/clients/<id>.ts`, hand-registered, merged to
+`main` — a deploy to ~82 live users per brand. The visible cost was on Pulse's side: it decides
+whether to show its "Create Brief" action purely from our `GET /api/v1/catalog`, so a brand we
+had not onboarded got no button.
+
+### Pulse built their half first
+
+`BBDO_Trend_Application/bbdo-trends-platform/docs/PARTNER-BRAND-API.md`, in response to
+`docs/PULSE-BRAND-SYNC-REQUEST.md`. Three read routes, bearer-gated on `PARTNER_API_TOKEN`,
+which **deliberately rejects `TRENDS_API_TOKEN`** so the two revoke independently. They went
+further than the request: ten context sections instead of five, and a new
+`brand_guidelines.proposition` column so positioning is a real field rather than Markdown we
+would have had to parse.
+
+Their half is **not deployed yet** — their log says prod still needs migration
+`20261109000000` applied and `PARTNER_API_TOKEN` set in the hosting env before the code deploy.
+
+### Shape on our side
+
+- `db/supabase/0007_pulse_clients.sql` — `pulse_clients`. The header states the **local/synced
+  split**, which is the whole design: a Refresh overwrites everything Pulse owns
+  (`brand_guidelines`, `prompt_guidance`, `guideline_version`, logo bytes, `pulse_payload`) and
+  touches nothing we own (`label`, `description`, `icon`, `color`, `aliases`, `brief_types`).
+  Otherwise an admin who fixed a wrong accent colour would watch it revert, and stop clicking
+  Refresh.
+- `lib/pulse/client.ts` — the **first outbound HTTP call to an external service in this repo**;
+  everything else goes through an SDK. Sets the pattern: configured-probe, explicit
+  `AbortSignal.timeout` per call, `cache: 'no-store'`, upstream failures mapped to a typed
+  `PulseError`.
+- `lib/pulse/compose.ts` — **pure**, so a better composition can be re-run over every onboarded
+  brand from the stored `pulse_payload` without re-pulling.
+- `lib/clients/registry.ts` — merges both registries. **Degrades to static-only** on a synced-store
+  failure, proven live (see below).
+- `GET /api/clients` + `lib/clients/card.ts` — card fields only, which is how brand prose stopped
+  shipping to browsers.
+- `/agency/admin/pulse` + `components/agency/PulseBrandsView.tsx` — server-component gate then a
+  client view, same split as `/agency/admin`. First use of `components/ui/dialog.tsx`, which had
+  been installed and imported nowhere.
+
+### Three things the real data changed, which reasoning would not have caught
+
+Found by pointing at a local Pulse instance and reading what came back, before writing the DB row.
+
+1. **`trackingTerms[].queries` is an object, not a `string[]`.** It was typed as an array first,
+   which would have thrown `.map is not a function` and 500'd every preview for any brand with
+   tracking terms. Real shapes: `{keywords}`, `{hashtags, broadSeeds}`, `{domains, keywords}`,
+   `{tiktokIndustryId}` and `{}`. compose.ts now **whitelists** the vocabulary-bearing keys —
+   `domains` are news source URLs and `tiktokIndustryId` is an opaque id, neither of which is
+   language a brief should borrow.
+2. **`guideline.systemPromptOverride` is not brand guidance and is deliberately dropped.** All
+   four brands that have one carry a prompt for *Pulse's own idea generation*. Bahrain EDB's
+   opens *"Apply the analyst frame from the shared system prompt to the cached trend data. Every
+   trend cited in source_trends must come from that block exactly"* — instructions for a
+   different task, naming fields that do not exist in a brief. Each then continues into genuine
+   brand voice, so it is a mix with no delimiter. The usable half is already fully covered by
+   `voiceNotes` and `avoidTopics`, so dropping it loses nothing.
+3. **Their rows duplicate heavily.** 16 of Bahrain EDB's 28 tracking rows carry the identical ten
+   keywords, once per market. Rendered as written that is the same terms in the prompt sixteen
+   times. Now deduplicated to one capped list; channel and region are dropped with them, since
+   `region` is not reliably a market anyway (a reddit row held `bahrain`).
+
+Also: `homeIndustryLabel` is **not** a category — on P&O it holds "A DP World Company" — so it is
+used only for the icon/description *suggestions* an admin can correct, never in the prompt. And
+`selectorBg` is `#ffffff` for 8 of 11 brands (nobody set one), so `nearestColorKey` returns the
+default for anything greyish rather than suggesting an arbitrary hue.
+
+### Brand prose no longer ships to the browser — measured
+
+The three `/agency` pages were `'use client'` and imported `@/lib/clients`, which pulled every
+config module into the public bundle. Built `HEAD` and the change in two clean worktrees and
+grepped:
+
+| | `.next/static` (browser) | `.next/server` |
+|---|---|---|
+| Before | **"Travel Without The Travel", "TENSION → INSIGHT → TRUTH" FOUND** in two chunks | present |
+| After | absent | present |
+
+Any signed-in user could read P&O's full brand strategy out of a JS chunk. It is a
+confidentiality fix, **not** a size win — total chunk size is 1.3M either way.
+
+### What is verified, against the live Pulse instance and the live database
+
+Pulse dev server on `:3100`, ours on `:3200` (3000 was already taken by a Pulse server).
+
+| Check | Result |
+|---|---|
+| `GET /api/partner/brands` with `PARTNER_API_TOKEN` | `200`, 11 brands |
+| No header / `TRENDS_API_TOKEN` as bearer | `401` / `401` — the asymmetry is real |
+| Malformed brand id | `404`, not `500` |
+| Composition over 5 real brands | correct; output read in full, not spot-checked |
+| Registry degradation with `pulse_clients` absent | serves the 7 static clients and logs loudly |
+| `GET /api/v1/catalog` with a real key | `200`, 7 clients, 104,994 bytes, aliases intact |
+| `GET /api/v1/clients`, `/me` | unchanged |
+| `"P&O"` through the new async resolver | resolves to `p-and-o`, then 404s on the *tier* — ordering intact |
+| Unknown client name | still 404s with the catalog pointer |
+| Unauthenticated `/api/clients`, `/api/clients/{id}/logo`, `/api/admin/pulse-brands` | `401` |
+| `/agency/admin/pulse`, `/agency` unauthenticated | `307` to `/login` |
+| `npm run build` in a clean worktree | succeeds; all new routes present |
+| Image dimension parser on 5 real PNGs | correct — Starbucks is 1280x1287, which the old 100x26 default would have squashed 4:1 |
+
+A throwaway key (`bbdo_sk_xm3C`) was minted for the `/api/v1` checks and **revoked immediately
+after**, with the revocation confirmed effective on the next request. Same practice as the
+`bbdo_sk_Ds0p` key in October.
+
+### Still blocked — this is NOT done
+
+1. **Migration 0007 is not applied.** `SUPABASE_ACCESS_TOKEN` in `.env.local` is **dead** — every
+   Management API call returns `401 Invalid access token`, including `GET /v1/projects`. The
+   capability recorded in this log on 2026-10-21 no longer works. `psql` is absent, `pg` is not
+   in `node_modules`, and the `supabase` CLI is logged into an account that can only see
+   `court-share`. So 0007 needs either a fresh scoped PAT or a paste into the Supabase SQL
+   editor. Until then every synced-brand path is untested and the registry runs its degradation
+   branch.
+2. **The admin UI has not been exercised.** It needs an admin session, which needs a real OTP
+   email. No test sign-in emails were sent.
+3. **The logo transport is unproven.** Pulse's local instance returns
+   `404 {"error":"Logo blob not found"}` for **all four** brands with `hasLogo: true`, so its
+   blob container is unreachable from that environment. Our code treats that as "no logo" and
+   onboards without one, which is correct; the bytes-to-`.docx` path needs Pulse's deployed
+   instance to confirm.
+
+### Worth knowing before testing
+
+Only **4 of 11** Pulse brands have guidelines at all: Bahrain EDB (v1), P&O (v1), Sadia (v1),
+Starbucks (v2). Five of the rest are already hand-authored clients here (Starbucks, Sadia, P&O,
+McVitie's, Google Gemini) and correctly report as `onboarded_static`. That leaves **Bahrain EDB
+as the only brand that will exercise a real onboarding** — Etihad Airways, Lay's, Jotun, Botim
+and Volkswagen have no guideline, so they would onboard with almost no brand context. Its
+composition comes out at 3,031 characters of brand guidelines and 2,439 of prompt guidance.
+
+**`proposition` is null on every Pulse brand**, including all four with guidelines — the column
+exists but nobody has filled it. So in practice an admin writes the proposition locally on every
+onboarding, which the dialog supports and a Refresh will not overwrite.
 
 ---
 
