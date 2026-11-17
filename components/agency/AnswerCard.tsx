@@ -106,6 +106,18 @@ export function AnswerCard({ question, index, total, answer, onSave, onOpenChat,
                 <Sparkles className="h-3 w-3" /> AI draft · {answer.confidence}
               </span>
             )}
+            {/*
+              A question the template asks the model to WRITE rather than extract from the
+              uploaded materials. Shown whether or not it is filled, and regardless of
+              confidence, because the thing the reader needs to know is that these facts came
+              from the model's own knowledge and nobody has checked them yet. The same caution
+              is printed under the heading in the .docx.
+            */}
+            {question.generated && (
+              <span className="px-2.5 py-1 text-[10px] md:text-xs font-bold rounded-md bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> AI-written · verify
+              </span>
+            )}
           </div>
           <h3 className="text-lg md:text-2xl font-extrabold text-slate-900 mb-1 md:mb-2 leading-tight">{question.title}</h3>
           <p className="text-slate-700 text-xs md:text-sm bg-white p-2.5 md:p-3 rounded-xl border-2 border-slate-300 italic font-medium shadow-sm">

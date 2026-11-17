@@ -32,6 +32,9 @@ export const CLIENT_ICON_KEYS = [
   'Ship',
   'Sparkles',
   'Cookie',
+  // Added for Etihad. There was no aeroplane in the set, which is why suggestIconKey below
+  // mapped airlines to 'Ship' — a ferry icon for a flag carrier.
+  'Plane',
 ] as const;
 
 export const CLIENT_COLOR_KEYS = ['purple', 'orange', 'pink', 'teal', 'yellow', 'red', 'blue', 'navy'] as const;
@@ -125,7 +128,8 @@ export function suggestIconKey(category: string | null | undefined): ClientIconK
   if (/telecom|broadcast|radio|audio/.test(c)) return 'Radio';
   if (/advertis|marketing|communicat|media agency/.test(c)) return 'Megaphone';
   if (/ferry|ship|marine|logistic|freight|port/.test(c)) return 'Ship';
-  if (/travel|avia|airline|tourism|transport/.test(c)) return 'Ship';
+  if (/avia|airline|airport|flight/.test(c)) return 'Plane';
+  if (/travel|tourism|transport/.test(c)) return 'Plane';
   if (/tech|software|ai|digital|electronic|energy/.test(c)) return 'Zap';
   if (/beauty|luxury|cosmetic|fashion/.test(c)) return 'Sparkles';
   if (/retail|subscription|ecommerce/.test(c)) return 'Repeat';

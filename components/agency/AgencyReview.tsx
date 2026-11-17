@@ -215,6 +215,18 @@ export function AgencyReview({
         ))}
       </div>
 
+      {/*
+        Which part of the brief this question belongs to.
+        Only one question is on screen at a time, so the section reads as a "you are here"
+        label rather than a group header. Absent for every tier that does not set `section`,
+        which is all of them except Etihad's destination launch.
+      */}
+      {currentQuestion.section && (
+        <p className="mb-2 text-[11px] md:text-xs font-bold uppercase tracking-widest text-slate-500">
+          {currentQuestion.section}
+        </p>
+      )}
+
       {/* Answer Card + Chat Panel */}
       <div className={`grid gap-4 ${chatOpenId === currentQuestion.id ? 'lg:grid-cols-[1.4fr_1fr]' : 'grid-cols-1'}`}>
         <AnswerCard

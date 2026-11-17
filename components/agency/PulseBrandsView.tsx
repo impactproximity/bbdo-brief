@@ -65,7 +65,8 @@ interface BrandRow {
 interface Vocabulary {
   icons: string[];
   colors: string[];
-  briefTypes: { id: string; label: string }[];
+  /** Every registered tier. `isDefault` marks the four every client gets by default. */
+  briefTypes: { id: string; label: string; isDefault: boolean }[];
 }
 
 interface PreviewPayload {
@@ -577,9 +578,9 @@ function OnboardDialog({
         setIcon(existing?.icon ?? data.suggested.icon);
         setColor(existing?.color ?? data.suggested.color);
         setAliases((existing?.aliases ?? []).join(', '));
-        // All tiers checked represents "no allow-list", which is what null means. An existing
-        // explicit list is shown as exactly that list.
-        setTierIds(existing?.briefTypes ?? vocabulary.briefTypes.map((t) => t.id));
+        // A brand with no explicit allow-list gets the DEFAULTS pre-checked — not every tier
+        // that exists, which would silently hand a new brand another client's scoped template.
+        setTierIds(existing?.briefTypes ?? vocabulary.briefTypes.filter((t) => t.isDefault).map((t) => t.id));
         setPropositionSource(existing?.propositionSource ?? 'pulse');
         setLocalProposition(
           existing?.propositionSource === 'local' ? existing.proposition : data.composed.proposition,
@@ -599,7 +600,13 @@ function OnboardDialog({
     setSaving(true);
     setError(null);
     try {
-      const allTiersChecked = tierIds.length === vocabulary.briefTypes.length;
+      // null means "whatever the defaults are", which is the right thing to store when the
+      // selection IS exactly the defaults — the client then tracks any future change to them.
+      // Compared against the defaults, not against the whole list: the old check asked whether
+      // every tier was ticked, so a client-scoped tier could never be expressed at all.
+      const defaultIds = vocabulary.briefTypes.filter((t) => t.isDefault).map((t) => t.id);
+      const isExactlyDefaults =
+        tierIds.length === defaultIds.length && defaultIds.every((id) => tierIds.includes(id));
       const res = await fetch(`/api/admin/pulse-brands/${brand.pulseBrandId}/onboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -616,7 +623,7 @@ function OnboardDialog({
             .filter(Boolean),
           // null, not the full list: it means "the default tiers", so the client keeps
           // tracking that default if it ever changes rather than freezing today's four.
-          briefTypes: allTiersChecked ? null : tierIds,
+          briefTypes: isExactlyDefaults ? null : tierIds,
           propositionSource,
           proposition: propositionSource === 'local' ? localProposition : undefined,
         }),
@@ -787,20 +794,46 @@ function OnboardDialog({
 
             <div>
               <h3 className="text-sm font-bold text-slate-800 mb-2">Brief types</h3>
-              <div className="flex flex-wrap gap-3 text-xs">
-                {vocabulary.briefTypes.map((t) => (
-                  <label key={t.id} className="inline-flex items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      checked={tierIds.includes(t.id)}
-                      onChange={(e) =>
-                        setTierIds((prev) => (e.target.checked ? [...prev, t.id] : prev.filter((x) => x !== t.id)))
-                      }
-                    />
-                    {t.label}
-                  </label>
-                ))}
-              </div>
+              {/*
+                Grouped, not one flat list.
+                The two sets read almost identically by name — "Social Brief" is a standard
+                tier while "Always-On Asset Brief" is one of another client's BTIM tracks —
+                and a flat list of eight got Etihad onboarded with three templates belonging
+                to a different client and none of the standard four. The separation and the
+                warning are what stop that being a one-click mistake.
+              */}
+              {(['standard', 'scoped'] as const).map((group) => {
+                const tiers = vocabulary.briefTypes.filter((t) => (group === 'standard' ? t.isDefault : !t.isDefault));
+                if (tiers.length === 0) return null;
+                return (
+                  <div key={group} className="mb-3 last:mb-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
+                      {group === 'standard' ? 'Standard tiers' : 'Built for one specific client'}
+                    </p>
+                    {group === 'scoped' && (
+                      <p className="text-[11px] text-amber-800 mb-1.5">
+                        Only tick one of these if it was written for <em>this</em> brand. These
+                        templates carry another client&rsquo;s questions and wording.
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                      {tiers.map((t) => (
+                        <label key={t.id} className="inline-flex items-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            checked={tierIds.includes(t.id)}
+                            onChange={(e) =>
+                              setTierIds((prev) => (e.target.checked ? [...prev, t.id] : prev.filter((x) => x !== t.id)))
+                            }
+                          />
+                          {t.label}
+                          <span className="text-[10px] text-slate-400 font-mono">{t.id}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
               {tierIds.length === 0 && (
                 <p className="text-[11px] text-amber-800 mt-1.5">
                   Pick at least one, or this client will have nothing to raise.
