@@ -142,10 +142,94 @@ const PEOPLE_TABLE_IDS = new Set(['people', 'stakeholders']);
 // Question IDs that should render as sign-off tables (Role | Signature)
 const SIGNOFF_TABLE_IDS = new Set(['stakeholder_signoff', 'approvals']);
 
+/**
+ * An answer as one Paragraph per line, so line breaks survive into Word.
+ *
+ * Blank lines are dropped rather than emitted as empty paragraphs — a model answer commonly
+ * double-spaces its bullets, which would otherwise double the section's height. Spacing after
+ * the final line matches what the old single-paragraph version used.
+ */
+function buildBodyParagraphs(content: string): Paragraph[] {
+    const lines = (content || "Not provided").split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l.length > 0);
+    if (lines.length === 0) return [new Paragraph({ text: "Not provided", spacing: { after: 400 } })];
+    return lines.map((line, i) =>
+        new Paragraph({ text: line, spacing: { after: i === lines.length - 1 ? 400 : 60 } }),
+    );
+}
+
+/** The verify-before-use caution printed under a question the model wrote rather than extracted. */
+function buildGeneratedCaution(): Paragraph {
+    return new Paragraph({
+        children: [
+            new TextRun({
+                text: "AI-written from general knowledge, not from the uploaded materials — verify before use.",
+                italics: true,
+                size: 18,
+                color: "B45309",
+            }),
+        ],
+        spacing: { after: 120 },
+    });
+}
+
+/** A section heading, emitted when a run of questions starts a new `section`. */
+function buildSectionHeading(title: string): Paragraph {
+    return new Paragraph({
+        children: [new TextRun({ text: title, bold: true, size: 32, color: "1F2937" })],
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 400, after: 160 },
+    });
+}
+
+/**
+ * A run of `tableRow` questions as ONE two-column table: question title | answer.
+ *
+ * This is how a checklist the client drew as a table comes out as a table rather than as five
+ * separate ones. Deliberately NOT routed through parsePeopleData: that splits each line on
+ * /[:|-]/, which would chop "Inaugural 14 June 2026 · 4x weekly" into nonsense cells. Each
+ * answer keeps its own line breaks via buildBodyParagraphs.
+ */
+function buildGroupedTable(rows: { title: string; content: string }[]): Table {
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+            new TableRow({
+                children: [
+                    new TableCell({
+                        children: [new Paragraph({ children: [new TextRun({ text: "Category", bold: true })] })],
+                        width: { size: 30, type: WidthType.PERCENTAGE },
+                        shading: { fill: "E0E0E0" },
+                    }),
+                    new TableCell({
+                        children: [new Paragraph({ children: [new TextRun({ text: "Practical requirements", bold: true })] })],
+                        width: { size: 70, type: WidthType.PERCENTAGE },
+                        shading: { fill: "E0E0E0" },
+                    }),
+                ],
+            }),
+            ...rows.map((r) =>
+                new TableRow({
+                    children: [
+                        new TableCell({
+                            children: [new Paragraph({ children: [new TextRun({ text: r.title, bold: true })] })],
+                            width: { size: 30, type: WidthType.PERCENTAGE },
+                        }),
+                        new TableCell({
+                            children: buildBodyParagraphs(r.content),
+                            width: { size: 70, type: WidthType.PERCENTAGE },
+                        }),
+                    ],
+                }),
+            ),
+        ],
+    });
+}
+
 function buildSectionForQuestion(
     title: string,
     questionId: string,
     content: string,
+    generated = false,
 ): (Paragraph | Table)[] {
     const elements: (Paragraph | Table)[] = [];
 
@@ -167,6 +251,8 @@ function buildSectionForQuestion(
             },
         })
     );
+
+    if (generated) elements.push(buildGeneratedCaution());
 
     if (PEOPLE_TABLE_IDS.has(questionId)) {
         // Render as people table
@@ -217,13 +303,15 @@ function buildSectionForQuestion(
             })
         );
     } else {
-        // Regular text section
-        elements.push(
-            new Paragraph({
-                text: content || "Not provided",
-                spacing: { after: 400 },
-            })
-        );
+        // Regular text section.
+        //
+        // One Paragraph PER LINE, not one Paragraph for the whole answer. docx 9.5.1 forwards a
+        // string to TextRun untouched and never converts "\n" into <w:br/>, so the previous
+        // single-Paragraph version collapsed every multi-line answer into one run of running
+        // text — while AnswerCard's whitespace-pre-wrap showed it correctly on screen. Bulleted
+        // or multi-line answers looked right to whoever wrote them and arrived as mush in the
+        // deliverable. This affects every tier, not just the ones using the new fields.
+        elements.push(...buildBodyParagraphs(content));
     }
 
     // Spacer after tables
@@ -322,15 +410,44 @@ export async function POST(req: Request) {
         // Build document sections dynamically from questions
         const contentSections: (Paragraph | Table)[] = [];
 
+        // Only AgencyQuestion carries section/generated/tableRow; the Shamal configs use the
+        // base Question. Read them through one optional-field view so this loop works for both
+        // and a Shamal brief behaves exactly as it did.
+        type RenderableQuestion = { id: string; title: string; section?: string; generated?: boolean; tableRow?: boolean };
+        const renderable = questions as RenderableQuestion[];
+
         // Skip first question (brief name) — it's used as the H1 title
-        for (let i = 1; i < questions.length; i++) {
-            const q = questions[i];
-            const sectionElements = buildSectionForQuestion(
-                q.title,
-                q.id,
-                responses[q.id],
+        let openSection: string | undefined;
+        for (let i = 1; i < renderable.length; i++) {
+            const q = renderable[i];
+
+            // A new `section` opens a heading. Questions sharing a section must be contiguous —
+            // see the field's doc comment in lib/questions/agency/types.ts.
+            if (q.section && q.section !== openSection) {
+                contentSections.push(buildSectionHeading(q.section));
+                openSection = q.section;
+            } else if (!q.section) {
+                openSection = undefined;
+            }
+
+            // A contiguous run of tableRow questions inside one section becomes ONE table, so a
+            // checklist the client drew as a table arrives as a table rather than as N of them.
+            if (q.tableRow) {
+                const run: { title: string; content: string }[] = [];
+                let j = i;
+                while (j < renderable.length && renderable[j].tableRow && renderable[j].section === q.section) {
+                    run.push({ title: renderable[j].title, content: responses[renderable[j].id] });
+                    j++;
+                }
+                contentSections.push(buildGroupedTable(run));
+                contentSections.push(new Paragraph({ text: "", spacing: { after: 400 } }));
+                i = j - 1;
+                continue;
+            }
+
+            contentSections.push(
+                ...buildSectionForQuestion(q.title, q.id, responses[q.id], q.generated),
             );
-            contentSections.push(...sectionElements);
         }
 
         // Build header — Shamal flow includes the Shamal logo on the right; agency flow is Omnicom-only.

@@ -5,7 +5,7 @@ import { buildDashboardRows } from '@/lib/pulse/onboard';
 import { countDocumentsByClient, isPulseStoreConfigured, listPulseClients } from '@/lib/clients/pulse-store';
 import { pulseErrorResponse } from '@/lib/pulse/error-response';
 import { CLIENT_COLOR_KEYS, CLIENT_ICON_KEYS } from '@/lib/clients/card-vocabulary';
-import { AGENCY_BRIEF_TYPES } from '@/lib/questions/agency';
+import { ALL_AGENCY_BRIEF_TYPES } from '@/lib/questions/agency';
 
 export const runtime = 'nodejs';
 
@@ -52,10 +52,15 @@ export async function GET() {
       brands: buildDashboardRows(brands, syncedRows, documentCounts),
       // The closed sets and the tier list, so the onboard dialog's dropdowns come from the
       // same source the POST validates against and cannot drift from it.
+      //
+      // EVERY registered tier, not just the four defaults. A client-scoped tier — Etihad's
+      // destination-launch template, the BTIM social tracks — was previously absent from this
+      // list, so the dialog could not express "the defaults plus Etihad's own template" at all
+      // and a brand could only ever be given the standard four.
       vocabulary: {
         icons: CLIENT_ICON_KEYS,
         colors: CLIENT_COLOR_KEYS,
-        briefTypes: AGENCY_BRIEF_TYPES.map((t) => ({ id: t.id, label: t.label })),
+        briefTypes: ALL_AGENCY_BRIEF_TYPES.map((t) => ({ id: t.id, label: t.label, isDefault: t.isDefault })),
       },
     });
   } catch (err) {

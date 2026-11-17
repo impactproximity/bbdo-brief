@@ -3,6 +3,7 @@ import { taskConfig } from './task';
 import { socialConfig } from './social';
 import { productionConfig } from './production';
 import { socialAlwaysOnConfig, socialCampaignConfig, socialLiveConfig } from './social-impact';
+import { etihadDestinationLaunchConfig } from './etihad-destination-launch';
 import type { AgencyBriefConfig, BriefType } from './types';
 
 export type { AgencyQuestion, AgencyBriefConfig, PrefillAnswer, PrefillResult } from './types';
@@ -20,6 +21,10 @@ const configs: Record<string, AgencyBriefConfig> = {
   'social-always-on': socialAlwaysOnConfig,
   'social-campaign': socialCampaignConfig,
   'social-live': socialLiveConfig,
+
+  // Client-scoped — Etihad Airways. Reachable only via a client's briefTypes allow-list, which
+  // for a Pulse-synced brand means pulse_clients.brief_types.
+  'etihad-destination-launch': etihadDestinationLaunchConfig,
 };
 
 /**
@@ -30,6 +35,18 @@ export const DEFAULT_AGENCY_BRIEF_TYPE_IDS: string[] = ['big-idea', 'task', 'soc
 
 /** The default (unscoped) tier list. Prefer getBriefTypesForClient when a client is known. */
 export const AGENCY_BRIEF_TYPES: BriefType[] = DEFAULT_AGENCY_BRIEF_TYPE_IDS.map((id) => configs[id].type);
+
+/**
+ * EVERY registered tier, with whether it is one of the defaults.
+ *
+ * For the admin onboarding UI only, which has to be able to grant a client a client-scoped tier
+ * — it previously offered just AGENCY_BRIEF_TYPES and so could not express "the four defaults
+ * plus Etihad's template" at all. Do NOT use this to decide what a client may raise: that is
+ * getBriefTypesForClient, and a tier listed here is reachable by nobody until a client names it.
+ */
+export const ALL_AGENCY_BRIEF_TYPES: (BriefType & { isDefault: boolean })[] = Object.entries(configs).map(
+  ([id, config]) => ({ ...config.type, isDefault: DEFAULT_AGENCY_BRIEF_TYPE_IDS.includes(id) }),
+);
 
 export function getAgencyBriefConfig(tierId: string): AgencyBriefConfig | undefined {
   return configs[tierId];

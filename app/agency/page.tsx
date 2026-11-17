@@ -8,7 +8,7 @@ import { AgencyToolbar, TOOLBAR_PILL } from '@/components/agency/AgencyToolbar';
 import { getBriefTypesForClient } from '@/lib/questions/agency';
 import type { ClientIconKey, ClientColorKey } from '@/lib/clients/card-vocabulary';
 import type { ClientCard } from '@/lib/clients/card';
-import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, Repeat, Megaphone, Radio, Ship, Sparkles, Cookie, Loader2 } from 'lucide-react';
+import { Lightbulb, Zap, Share2, Clapperboard, ArrowLeft, ArrowRight, Coffee, Beef, Building2, Repeat, Megaphone, Radio, Ship, Sparkles, Cookie, Plane, Loader2 } from 'lucide-react';
 
 /**
  * `satisfies`, not an annotation. It checks this literal carries an entry for EVERY key in
@@ -30,6 +30,7 @@ const iconMap = {
   Ship: <Ship className="h-8 w-8" />,
   Sparkles: <Sparkles className="h-8 w-8" />,
   Cookie: <Cookie className="h-8 w-8" />,
+  Plane: <Plane className="h-8 w-8" />,
 } satisfies Record<ClientIconKey, React.ReactNode>;
 
 /** The silent fallback, in one place. `key` is data — a client config or a tier config. */

@@ -65,7 +65,8 @@ interface BrandRow {
 interface Vocabulary {
   icons: string[];
   colors: string[];
-  briefTypes: { id: string; label: string }[];
+  /** Every registered tier. `isDefault` marks the four every client gets by default. */
+  briefTypes: { id: string; label: string; isDefault: boolean }[];
 }
 
 interface PreviewPayload {
@@ -577,9 +578,9 @@ function OnboardDialog({
         setIcon(existing?.icon ?? data.suggested.icon);
         setColor(existing?.color ?? data.suggested.color);
         setAliases((existing?.aliases ?? []).join(', '));
-        // All tiers checked represents "no allow-list", which is what null means. An existing
-        // explicit list is shown as exactly that list.
-        setTierIds(existing?.briefTypes ?? vocabulary.briefTypes.map((t) => t.id));
+        // A brand with no explicit allow-list gets the DEFAULTS pre-checked — not every tier
+        // that exists, which would silently hand a new brand another client's scoped template.
+        setTierIds(existing?.briefTypes ?? vocabulary.briefTypes.filter((t) => t.isDefault).map((t) => t.id));
         setPropositionSource(existing?.propositionSource ?? 'pulse');
         setLocalProposition(
           existing?.propositionSource === 'local' ? existing.proposition : data.composed.proposition,
@@ -599,7 +600,13 @@ function OnboardDialog({
     setSaving(true);
     setError(null);
     try {
-      const allTiersChecked = tierIds.length === vocabulary.briefTypes.length;
+      // null means "whatever the defaults are", which is the right thing to store when the
+      // selection IS exactly the defaults — the client then tracks any future change to them.
+      // Compared against the defaults, not against the whole list: the old check asked whether
+      // every tier was ticked, so a client-scoped tier could never be expressed at all.
+      const defaultIds = vocabulary.briefTypes.filter((t) => t.isDefault).map((t) => t.id);
+      const isExactlyDefaults =
+        tierIds.length === defaultIds.length && defaultIds.every((id) => tierIds.includes(id));
       const res = await fetch(`/api/admin/pulse-brands/${brand.pulseBrandId}/onboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -616,7 +623,7 @@ function OnboardDialog({
             .filter(Boolean),
           // null, not the full list: it means "the default tiers", so the client keeps
           // tracking that default if it ever changes rather than freezing today's four.
-          briefTypes: allTiersChecked ? null : tierIds,
+          briefTypes: isExactlyDefaults ? null : tierIds,
           propositionSource,
           proposition: propositionSource === 'local' ? localProposition : undefined,
         }),
@@ -798,6 +805,14 @@ function OnboardDialog({
                       }
                     />
                     {t.label}
+                    {!t.isDefault && (
+                      <span
+                        className="text-[10px] text-slate-400"
+                        title="A client-scoped template — built for one brand, and not offered to clients by default"
+                      >
+                        client-specific
+                      </span>
+                    )}
                   </label>
                 ))}
               </div>

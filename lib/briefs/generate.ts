@@ -81,6 +81,29 @@ export function buildSystemBlocks(config: AgencyBriefConfig, client?: ClientConf
   const baseStrategicPrompt = config.systemPrompt
     ?? `You are an expert agency brief writer at IMPACT BBDO. You are pre-filling a "${config.documentTitle}" from supporting materials.`;
 
+  // Questions the template wants WRITTEN, not extracted. Empty for every tier that does not
+  // use the flag, and the interpolation below then contributes nothing — so the prompt stays
+  // byte-identical for the seven tiers that predate this. Asserted, not assumed: a hash of
+  // every tier's blocks was taken before this change and compared after.
+  const generatedIds = config.questions.filter((q) => q.generated).map((q) => q.id);
+  const generatedRules = generatedIds.length === 0 ? '' : `
+
+QUESTIONS YOU WRITE RATHER THAN EXTRACT
+Rule 1 does not apply to these ids: ${generatedIds.join(', ')}.
+
+The corpus is not expected to contain these answers. Write them from your own knowledge of the
+subject. Never set "missing": true on them and never leave them empty.
+
+a. Prefer what stays true: climate and seasonality, the character and rhythm of a place,
+   long-established landmarks, staple dishes. Avoid what goes stale or is easily wrong — prices,
+   opening hours, event dates, "best" or "newest" anything, and named restaurants and hotels.
+b. Write as a strategist briefing a creative team, not as a travel listicle.
+c. Set "confidence" honestly. Lower it where you are working from general impression rather than
+   well-established fact: a human verifies this section, and "confidence" is how they know where
+   to look first. Uniform "high" across all of them is a failure, not a success.
+d. If you do not know the subject well enough to be useful, say exactly that in "value" instead
+   of inventing specifics.`;
+
   const operationalRules = `OPERATIONAL RULES FOR THIS PRE-FILL TASK
 You will pre-fill answers for the "${config.documentTitle}" using the submit_brief_answers tool exactly once.
 
@@ -89,7 +112,7 @@ You will pre-fill answers for the "${config.documentTitle}" using the submit_bri
 3. If the corpus has no signal at all for a question, set "missing": true and "value": "" (empty string).
 4. Use confidence "high" only when the corpus is explicit. Use "medium" when inferred. Use "low" for thin signal.
 5. In "suggestion", flag good-to-have additions or missing inputs (e.g. "Add success metrics", "No budget specified", "Push the reframe further").
-6. Keep each "value" concise and brief-ready (2-6 sentences). Sharp, not bloated.
+6. Keep each "value" concise and brief-ready (2-6 sentences). Sharp, not bloated.${generatedRules}
 
 QUESTIONS TO FILL:
 ${questionSchema}`;
