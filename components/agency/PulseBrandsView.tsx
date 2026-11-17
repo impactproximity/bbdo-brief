@@ -794,28 +794,46 @@ function OnboardDialog({
 
             <div>
               <h3 className="text-sm font-bold text-slate-800 mb-2">Brief types</h3>
-              <div className="flex flex-wrap gap-3 text-xs">
-                {vocabulary.briefTypes.map((t) => (
-                  <label key={t.id} className="inline-flex items-center gap-1.5">
-                    <input
-                      type="checkbox"
-                      checked={tierIds.includes(t.id)}
-                      onChange={(e) =>
-                        setTierIds((prev) => (e.target.checked ? [...prev, t.id] : prev.filter((x) => x !== t.id)))
-                      }
-                    />
-                    {t.label}
-                    {!t.isDefault && (
-                      <span
-                        className="text-[10px] text-slate-400"
-                        title="A client-scoped template — built for one brand, and not offered to clients by default"
-                      >
-                        client-specific
-                      </span>
+              {/*
+                Grouped, not one flat list.
+                The two sets read almost identically by name — "Social Brief" is a standard
+                tier while "Always-On Asset Brief" is one of another client's BTIM tracks —
+                and a flat list of eight got Etihad onboarded with three templates belonging
+                to a different client and none of the standard four. The separation and the
+                warning are what stop that being a one-click mistake.
+              */}
+              {(['standard', 'scoped'] as const).map((group) => {
+                const tiers = vocabulary.briefTypes.filter((t) => (group === 'standard' ? t.isDefault : !t.isDefault));
+                if (tiers.length === 0) return null;
+                return (
+                  <div key={group} className="mb-3 last:mb-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
+                      {group === 'standard' ? 'Standard tiers' : 'Built for one specific client'}
+                    </p>
+                    {group === 'scoped' && (
+                      <p className="text-[11px] text-amber-800 mb-1.5">
+                        Only tick one of these if it was written for <em>this</em> brand. These
+                        templates carry another client&rsquo;s questions and wording.
+                      </p>
                     )}
-                  </label>
-                ))}
-              </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+                      {tiers.map((t) => (
+                        <label key={t.id} className="inline-flex items-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            checked={tierIds.includes(t.id)}
+                            onChange={(e) =>
+                              setTierIds((prev) => (e.target.checked ? [...prev, t.id] : prev.filter((x) => x !== t.id)))
+                            }
+                          />
+                          {t.label}
+                          <span className="text-[10px] text-slate-400 font-mono">{t.id}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
               {tierIds.length === 0 && (
                 <p className="text-[11px] text-amber-800 mt-1.5">
                   Pick at least one, or this client will have nothing to raise.
